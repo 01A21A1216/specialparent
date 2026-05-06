@@ -1,0 +1,112 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    color-scheme: light;
+  }
+
+  html {
+    scroll-behavior: smooth;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  body {
+    @apply bg-cream-50 text-sage-900 antialiased;
+    font-feature-settings: 'ss01', 'cv01';
+  }
+
+  /* Generous, visible focus — accessibility first */
+  *:focus-visible {
+    @apply outline-none ring-2 ring-coral-400 ring-offset-2 ring-offset-cream-50 rounded-md;
+  }
+
+  /* Larger comfortable defaults — neurodivergent-friendly per PRD §14 */
+  button, a, input, select, textarea {
+    @apply min-h-[44px];
+  }
+
+  /* High-contrast preference */
+  @media (prefers-contrast: more) {
+    body {
+      @apply text-black;
+    }
+  }
+
+  /* Reduce motion preference */
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+      animation-duration: 0.01ms !important;
+      transition-duration: 0.01ms !important;
+    }
+  }
+}
+
+@layer components {
+  .container-app {
+    @apply mx-auto w-full max-w-6xl px-5 sm:px-8;
+  }
+
+  .card {
+    @apply rounded-3xl bg-white shadow-soft border border-sage-100 p-6;
+  }
+
+  .btn {
+    @apply inline-flex items-center justify-center gap-2 rounded-2xl px-5 py-3 font-medium transition-all min-h-[44px] text-base;
+  }
+
+  .btn-primary {
+    @apply btn bg-sage-600 text-cream-50 hover:bg-sage-700 active:scale-[0.98] shadow-soft;
+  }
+
+  .btn-secondary {
+    @apply btn bg-cream-100 text-sage-800 hover:bg-cream-200 border border-sage-200;
+  }
+
+  .btn-ghost {
+    @apply btn text-sage-700 hover:bg-sage-50;
+  }
+
+  .btn-coral {
+    @apply btn bg-coral-500 text-cream-50 hover:bg-coral-600 active:scale-[0.98] shadow-soft;
+  }
+
+  .input {
+    @apply w-full rounded-2xl border border-sage-200 bg-white px-4 py-3 text-base text-sage-900 placeholder:text-sage-400 focus:border-sage-400 focus:outline-none focus:ring-2 focus:ring-sage-300 focus:ring-offset-0;
+  }
+
+  .label {
+    @apply block text-sm font-medium text-sage-700 mb-2;
+  }
+
+  .chip {
+    @apply inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-sm font-medium;
+  }
+
+  /* Warm reading prose — used on long-form content pages (autism guide, etc.) */
+  .prose-warm {
+    @apply text-sage-700 text-lg leading-relaxed max-w-3xl;
+  }
+  .prose-warm p {
+    @apply mb-4;
+  }
+  .prose-warm strong {
+    @apply text-sage-900;
+  }
+  .prose-warm em {
+    @apply text-sage-900;
+  }
+  .prose-warm ul {
+    @apply mb-4 pl-6 space-y-2 list-disc marker:text-coral-400;
+  }
+  .prose-warm a {
+    @apply text-sage-900 underline underline-offset-2 decoration-coral-400;
+  }
+}
+
+/* Custom scrollbar — soft, non-jarring */
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: rgb(191 210 193 / 0.6); border-radius: 999px; }
+::-webkit-scrollbar-thumb:hover { background: rgb(148 179 153 / 0.8); }

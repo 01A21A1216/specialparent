@@ -1,0 +1,419 @@
+// SpecialParent.in — Prisma schema
+// Covers PRD §11 Core Entities and the Phase 1 MVP feature set,
+// designed to extend cleanly into school/IEP, govt schemes, payments etc.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ─── Auth & Users ──────────────────────────────────────────────────────────
+
+enum Role {
+  PARENT
+  THERAPIST
+  TEACHER
+  SCHOOL_ADMIN
+  ADMIN
+}
+
+enum Gender {
+  MALE
+  FEMALE
+  OTHER
+  PREFER_NOT_TO_SAY
+}
+
+enum Language {
+  EN
+  HI
+  TE
+  TA
+  KN
+  ML
+  BN
+  MR
+  GU
+}
+
+model User {
+  id                String         @id @default(cuid())
+  email             String         @unique
+  phone             String?        @unique
+  passwordHash      String
+  fullName          String
+  role              Role           @default(PARENT)
+  preferredLanguage Language       @default(EN)
+  avatarUrl         String?
+  isActive          Boolean        @default(true)
+  emailVerifiedAt   DateTime?
+  lastLoginAt       DateTime?
+  createdAt         DateTime       @default(now())
+  updatedAt         DateTime       @updatedAt
+
+  // relations
+  caregiverLinks    Caregiver[]
+  therapistProfile  TherapistProfile?
+  authoredSessions  TherapySession[]   @relation("TherapistSessions")
+  appointments      Appointment[]      @relation("UserAppointments")
+  posts             CommunityPost[]
+  comments          CommunityComment[]
+  notifications     Notification[]
+  refreshTokens     RefreshToken[]
+  auditLogs         AuditLog[]
+  aiMessages        AiMessage[]
+
+  @@index([role])
+}
+
+model RefreshToken {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tokenHash   String   @unique
+  userAgent   String?
+  ipAddress   String?
+  expiresAt   DateTime
+  revokedAt   DateTime?
+  createdAt   DateTime @default(now())
+
+  @@index([userId])
+}
+
+model TherapistProfile {
+  id              String    @id @default(cuid())
+  userId          String    @unique
+  user            User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  specialization  String    // e.g. "ABA", "Speech", "OT"
+  qualifications  String?
+  yearsExperience Int       @default(0)
+  bio             String?
+  hourlyRate      Int?      // INR paise
+  verifiedAt      DateTime?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+}
+
+// ─── Child & Care ──────────────────────────────────────────────────────────
+
+model Child {
+  id                  String          @id @default(cuid())
+  fullName            String
+  dateOfBirth         DateTime
+  gender              Gender          @default(PREFER_NOT_TO_SAY)
+  photoUrl            String?
+  diagnoses           String[]        // free-form tags: "ASD", "ADHD", etc.
+  allergies           String[]
+  medications         String[]
+  sensoryTriggers     String[]
+  communicationType   String?         // "verbal", "AAC", "PECS"
+  schoolName          String?
+  emergencyContact    String?
+  notes               String?
+  createdAt           DateTime        @default(now())
+  updatedAt           DateTime        @updatedAt
+
+  caregivers          Caregiver[]
+  milestones          Milestone[]
+  therapySessions     TherapySession[]
+  appointments        Appointment[]
+  goals               Goal[]
+  moodEntries         MoodEntry[]
+
+  @@index([fullName])
+}
+
+model Caregiver {
+  id           String   @id @default(cuid())
+  userId       String
+  childId      String
+  relationship String   // "mother", "father", "guardian", "grandparent"
+  isPrimary    Boolean  @default(false)
+  createdAt    DateTime @default(now())
+
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  child        Child    @relation(fields: [childId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, childId])
+  @@index([childId])
+}
+
+// ─── Development tracking ──────────────────────────────────────────────────
+
+enum MilestoneDomain {
+  COMMUNICATION
+  SOCIAL
+  EMOTIONAL
+  MOTOR
+  COGNITIVE
+  DAILY_LIVING
+  SENSORY
+}
+
+enum MilestoneStatus {
+  NOT_STARTED
+  IN_PROGRESS
+  ACHIEVED
+  REGRESSED
+}
+
+model Milestone {
+  id          String           @id @default(cuid())
+  childId     String
+  child       Child            @relation(fields: [childId], references: [id], onDelete: Cascade)
+  domain      MilestoneDomain
+  title       String
+  description String?
+  status      MilestoneStatus  @default(NOT_STARTED)
+  achievedAt  DateTime?
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+
+  @@index([childId, domain])
+}
+
+enum Mood {
+  GREAT
+  GOOD
+  OKAY
+  TOUGH
+  HARD
+}
+
+model MoodEntry {
+  id        String   @id @default(cuid())
+  childId   String
+  child     Child    @relation(fields: [childId], references: [id], onDelete: Cascade)
+  mood      Mood
+  note      String?
+  loggedAt  DateTime @default(now())
+  createdAt DateTime @default(now())
+
+  @@index([childId, loggedAt])
+}
+
+// ─── Therapy & Goals ───────────────────────────────────────────────────────
+
+enum TherapyType {
+  ABA
+  SPEECH
+  OCCUPATIONAL
+  PHYSIO
+  BEHAVIORAL
+  SPECIAL_EDUCATION
+  OTHER
+}
+
+enum SessionStatus {
+  SCHEDULED
+  COMPLETED
+  CANCELLED
+  NO_SHOW
+}
+
+model TherapySession {
+  id           String         @id @default(cuid())
+  childId      String
+  child        Child          @relation(fields: [childId], references: [id], onDelete: Cascade)
+  therapistId  String?
+  therapist    User?          @relation("TherapistSessions", fields: [therapistId], references: [id], onDelete: SetNull)
+  type         TherapyType
+  scheduledAt  DateTime
+  durationMins Int            @default(45)
+  status       SessionStatus  @default(SCHEDULED)
+  notes        String?
+  aiSummary    String?
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
+
+  @@index([childId, scheduledAt])
+  @@index([therapistId, scheduledAt])
+}
+
+enum GoalStatus {
+  ACTIVE
+  PAUSED
+  ACHIEVED
+  ARCHIVED
+}
+
+model Goal {
+  id          String      @id @default(cuid())
+  childId     String
+  child       Child       @relation(fields: [childId], references: [id], onDelete: Cascade)
+  title       String
+  description String?
+  status      GoalStatus  @default(ACTIVE)
+  targetDate  DateTime?
+  progress    Int         @default(0) // 0-100
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+
+  @@index([childId, status])
+}
+
+// ─── Appointments ──────────────────────────────────────────────────────────
+
+enum AppointmentKind {
+  THERAPY
+  DOCTOR
+  SCHOOL_MEETING
+  ASSESSMENT
+  OTHER
+}
+
+model Appointment {
+  id          String           @id @default(cuid())
+  childId     String?
+  child       Child?           @relation(fields: [childId], references: [id], onDelete: Cascade)
+  userId      String
+  user        User             @relation("UserAppointments", fields: [userId], references: [id], onDelete: Cascade)
+  kind        AppointmentKind  @default(OTHER)
+  title       String
+  location    String?
+  startsAt    DateTime
+  endsAt      DateTime
+  notes       String?
+  reminderAt  DateTime?
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+
+  @@index([userId, startsAt])
+  @@index([childId, startsAt])
+}
+
+// ─── Community ─────────────────────────────────────────────────────────────
+
+enum PostCategory {
+  GENERAL
+  SUCCESS_STORY
+  QUESTION
+  RESOURCE
+  REGIONAL
+}
+
+model CommunityPost {
+  id        String             @id @default(cuid())
+  authorId  String
+  author    User               @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  title     String
+  body      String
+  category  PostCategory       @default(GENERAL)
+  tags      String[]
+  pinned    Boolean            @default(false)
+  createdAt DateTime           @default(now())
+  updatedAt DateTime           @updatedAt
+
+  comments  CommunityComment[]
+
+  @@index([category, createdAt])
+}
+
+model CommunityComment {
+  id        String         @id @default(cuid())
+  postId    String
+  post      CommunityPost  @relation(fields: [postId], references: [id], onDelete: Cascade)
+  authorId  String
+  author    User           @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  body      String
+  createdAt DateTime       @default(now())
+
+  @@index([postId, createdAt])
+}
+
+// ─── AI Assistant ──────────────────────────────────────────────────────────
+
+enum AiRole {
+  USER
+  ASSISTANT
+  SYSTEM
+}
+
+model AiMessage {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  threadId  String   // simple grouping; future: AiThread model
+  role      AiRole
+  content   String
+  createdAt DateTime @default(now())
+
+  @@index([userId, threadId, createdAt])
+}
+
+// ─── Notifications & Audit ─────────────────────────────────────────────────
+
+enum NotificationKind {
+  REMINDER
+  SYSTEM
+  COMMUNITY
+  THERAPY
+  AI
+}
+
+model Notification {
+  id        String            @id @default(cuid())
+  userId    String
+  user      User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  kind      NotificationKind  @default(SYSTEM)
+  title     String
+  body      String?
+  link      String?
+  readAt    DateTime?
+  createdAt DateTime          @default(now())
+
+  @@index([userId, createdAt])
+}
+
+model AuditLog {
+  id         String   @id @default(cuid())
+  userId     String?
+  user       User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  action     String   // "user.login", "child.create" etc.
+  entityType String?
+  entityId   String?
+  metadata   Json?
+  ipAddress  String?
+  createdAt  DateTime @default(now())
+
+  @@index([userId, createdAt])
+  @@index([action, createdAt])
+}
+
+// ─── Resources (CMS-lite) ──────────────────────────────────────────────────
+
+model Resource {
+  id          String   @id @default(cuid())
+  slug        String   @unique
+  title       String
+  excerpt     String?
+  body        String   // markdown
+  category    String   // e.g. "autism-guides", "home-therapy"
+  language    Language @default(EN)
+  coverImage  String?
+  publishedAt DateTime?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([category, language])
+}
+
+// ─── Government Schemes (lightweight scaffold) ─────────────────────────────
+
+model GovernmentScheme {
+  id              String   @id @default(cuid())
+  slug            String   @unique
+  name            String
+  description     String
+  benefitSummary  String?
+  eligibility     String?
+  applyUrl        String?
+  states          String[]
+  language        Language @default(EN)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
