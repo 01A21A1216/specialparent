@@ -95,10 +95,13 @@ export default function DashboardPage() {
         </div>
         <div className="flex items-center gap-3 text-sm text-sage-600">
           {data?.unreadNotifications ? (
-            <span className="chip bg-coral-100 text-coral-700">
+            <Link
+              href="/notifications"
+              className="chip bg-coral-100 text-coral-700 hover:bg-coral-200 transition-colors"
+            >
               <span className="w-2 h-2 rounded-full bg-coral-500" />
               {data.unreadNotifications} new
-            </span>
+            </Link>
           ) : null}
         </div>
       </header>
@@ -241,7 +244,7 @@ export default function DashboardPage() {
 
           {/* Appointments */}
           <section>
-            <SectionHeader title="Appointments" />
+            <SectionHeader title="Appointments" link={{ href: '/appointments', label: 'View all' }} />
             <div className="card">
               {data?.upcomingAppts.length ? (
                 <ul className="divide-y divide-sage-100">

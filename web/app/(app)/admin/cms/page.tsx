@@ -102,7 +102,7 @@ function ResourcesPanel() {
     try {
       await api<Resource>('/admin/resources', {
         method: 'POST',
-        body: JSON.stringify(form),
+        body: form,
       });
       setEditing(null);
       await load();
@@ -344,7 +344,7 @@ function SchemesPanel() {
   async function save(form: any) {
     setErr(null);
     try {
-      await api<Scheme>('/admin/schemes', { method: 'POST', body: JSON.stringify(form) });
+      await api<Scheme>('/admin/schemes', { method: 'POST', body: form });
       setEditing(null);
       await load();
     } catch (e: any) {

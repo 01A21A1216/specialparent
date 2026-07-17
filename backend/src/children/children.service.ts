@@ -4,6 +4,8 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { Role } from '@prisma/client';
+import * as fs from 'fs';
+import * as path from 'path';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateChildDto, UpdateChildDto } from './children.dto';
 
@@ -21,6 +23,8 @@ export class ChildrenService {
         allergies: dto.allergies ?? [],
         medications: dto.medications ?? [],
         sensoryTriggers: dto.sensoryTriggers ?? [],
+        calmingStrategies: dto.calmingStrategies ?? [],
+        hobbies: dto.hobbies ?? [],
         communicationType: dto.communicationType,
         schoolName: dto.schoolName,
         emergencyContact: dto.emergencyContact,
@@ -66,6 +70,7 @@ export class ChildrenService {
           include: { therapist: { select: { id: true, fullName: true } } },
         },
         moodEntries: { orderBy: { loggedAt: 'desc' }, take: 30 },
+        diagnosticReports: { orderBy: { createdAt: 'desc' } },
       },
     });
     if (!child) throw new NotFoundException('Child not found');
@@ -93,10 +98,29 @@ export class ChildrenService {
   async remove(userId: string, role: Role, childId: string) {
     const child = await this.prisma.child.findUnique({
       where: { id: childId },
-      include: { caregivers: true },
+      include: { caregivers: true, diagnosticReports: true },
     });
     if (!child) throw new NotFoundException('Child not found');
     this.assertAccess(child, userId, role, /*requirePrimary*/ true);
+
+    // The Child cascade wipes DB rows (Caregiver, Milestone, TherapySession,
+    // Appointment, Goal, MoodEntry, DiagnosticReport). It does NOT know about
+    // the files those diagnostic reports point to on disk — clean those first
+    // so we don't leave orphans in backend/uploads/reports/.
+    const uploadsRoot = path.join(process.cwd(), 'uploads');
+    const dirsToTry = new Set<string>();
+    await Promise.all(
+      child.diagnosticReports.map(async (r) => {
+        const abs = path.join(uploadsRoot, r.filePath);
+        dirsToTry.add(path.dirname(abs));
+        await fs.promises.unlink(abs).catch(() => {});
+      }),
+    );
+    // Best-effort: remove the child's per-child directory if now empty.
+    for (const dir of dirsToTry) {
+      await fs.promises.rmdir(dir).catch(() => {});
+    }
+
     await this.prisma.child.delete({ where: { id: childId } });
     return { ok: true };
   }

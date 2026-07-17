@@ -63,7 +63,7 @@ export default function AdminUsers() {
     try {
       const updated = await api<User>(`/admin/users/${id}`, {
         method: 'PATCH',
-        body: JSON.stringify(patch),
+        body: patch,
       });
       setUsers((prev) => prev.map((u) => (u.id === id ? updated : u)));
     } catch (e: any) {

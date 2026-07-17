@@ -1,19 +1,39 @@
 'use client';
 
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useState } from 'react';
 import { AuthLayout } from '../../components/auth-layout';
 import { useAuth } from '../../components/auth-provider';
 
+type SignupRole = 'PARENT' | 'THERAPIST' | 'DOCTOR' | 'TEACHER' | 'SPECIAL_EDUCATOR' | 'SCHOOL_ADMIN';
+
+const ROLE_OPTIONS: Array<{ value: SignupRole; label: string }> = [
+  { value: 'PARENT', label: 'Parent' },
+  { value: 'THERAPIST', label: 'Therapist' },
+  { value: 'DOCTOR', label: 'Doctor' },
+  { value: 'SPECIAL_EDUCATOR', label: 'Special educator' },
+  { value: 'TEACHER', label: 'Teacher' },
+  { value: 'SCHOOL_ADMIN', label: 'School admin' },
+];
+
 export default function SignupPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { signup } = useAuth();
 
-  const [email, setEmail] = useState('');
+  const nextPath = searchParams?.get('next') ?? '/dashboard';
+  const prefilledEmail = searchParams?.get('email') ?? '';
+  const prefilledRoleRaw = searchParams?.get('role');
+  const prefilledRole =
+    prefilledRoleRaw && ROLE_OPTIONS.some((o) => o.value === prefilledRoleRaw)
+      ? (prefilledRoleRaw as SignupRole)
+      : 'PARENT';
+
+  const [email, setEmail] = useState(prefilledEmail);
   const [fullName, setFullName] = useState('');
   const [password, setPassword] = useState('');
-  const [role, setRole] = useState<'PARENT' | 'THERAPIST' | 'TEACHER'>('PARENT');
+  const [role, setRole] = useState<SignupRole>(prefilledRole);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -23,7 +43,7 @@ export default function SignupPage() {
     setError(null);
     try {
       await signup({ email: email.trim().toLowerCase(), fullName, password, role });
-      router.replace('/dashboard');
+      router.replace(nextPath);
     } catch (err: any) {
       setError(err?.message ?? 'Sign-up failed');
     } finally {
@@ -87,19 +107,19 @@ export default function SignupPage() {
 
         <div>
           <label className="label">I am a…</label>
-          <div className="grid grid-cols-3 gap-2">
-            {(['PARENT', 'THERAPIST', 'TEACHER'] as const).map((r) => (
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+            {ROLE_OPTIONS.map((opt) => (
               <button
-                key={r}
+                key={opt.value}
                 type="button"
-                onClick={() => setRole(r)}
+                onClick={() => setRole(opt.value)}
                 className={`rounded-2xl px-3 py-3 text-sm font-medium transition-colors border-2 ${
-                  role === r
+                  role === opt.value
                     ? 'bg-sage-600 text-cream-50 border-sage-600'
                     : 'bg-white text-sage-700 border-sage-200 hover:border-sage-400'
                 }`}
               >
-                {r === 'PARENT' ? 'Parent' : r === 'THERAPIST' ? 'Therapist' : 'Teacher'}
+                {opt.label}
               </button>
             ))}
           </div>

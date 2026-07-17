@@ -17,6 +17,8 @@ import { AiModule } from './ai/ai.module';
 import { NotificationsModule } from './notifications/notifications.module';
 import { ResourcesModule } from './resources/resources.module';
 import { AdminModule } from './admin/admin.module';
+import { ReportsModule } from './reports/reports.module';
+import { InvitesModule } from './invites/invites.module';
 import { HealthController } from './common/health.controller';
 import { AuditInterceptor } from './common/audit.interceptor';
 
@@ -41,6 +43,8 @@ import { AuditInterceptor } from './common/audit.interceptor';
     NotificationsModule,
     ResourcesModule,
     AdminModule,
+    ReportsModule,
+    InvitesModule,
   ],
   controllers: [HealthController],
   providers: [

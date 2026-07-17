@@ -16,30 +16,6 @@ interface Student {
   _count: { milestones: number; therapySessions: number; goals: number };
 }
 
-// IEP demo data — in a real build this would be a dedicated module.
-// Keeps the school portal navigable in the Phase-1 demo without
-// pretending to ship full IEP workflows.
-const IEP_PLACEHOLDERS = [
-  {
-    domain: 'Communication',
-    goal: 'Initiate verbal request 5x/day with adult prompt',
-    progress: 65,
-    accommodations: ['Visual schedule', 'AAC tablet access'],
-  },
-  {
-    domain: 'Social',
-    goal: 'Engage in parallel play for 10 min during recess',
-    progress: 40,
-    accommodations: ['Buddy system', 'Movement breaks'],
-  },
-  {
-    domain: 'Academics',
-    goal: 'Read 3-letter CVC words with 80% accuracy',
-    progress: 75,
-    accommodations: ['Extended time', 'Large-print worksheets', 'Quiet test room'],
-  },
-];
-
 export default function SchoolPortal() {
   const { user } = useAuth();
   const [students, setStudents] = useState<Student[] | null>(null);
@@ -61,17 +37,15 @@ export default function SchoolPortal() {
           Inclusive classroom
         </h1>
         <p className="mt-3 text-sage-600 max-w-2xl leading-relaxed">
-          Students you support, their accommodations, and IEP progress at a glance.
-          Built around the way Indian inclusive classrooms actually run.
+          The students you support, in one place. Built around the way Indian
+          inclusive classrooms actually run — with IEP tools and accommodation
+          planning coming next.
         </p>
       </header>
 
       {/* Quick stats */}
-      <section className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      <section className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <StatCard label="Students" value={students?.length ?? '—'} tone="sage" />
-        <StatCard label="Active IEPs" value={students?.length ?? '—'} tone="coral" />
-        <StatCard label="This week's reviews" value={2} tone="mist" />
-        <StatCard label="Parent messages" value={5} tone="lavender" />
       </section>
 
       {/* Students list */}
@@ -126,49 +100,6 @@ export default function SchoolPortal() {
             No students linked yet. Ask parents to share their child's profile with your school.
           </div>
         )}
-      </section>
-
-      {/* IEP demo card */}
-      <section>
-        <div className="flex items-end justify-between mb-4">
-          <div>
-            <h2 className="font-display text-2xl text-sage-900">IEP overview</h2>
-            <p className="text-sage-500 text-sm">Sample IEP — full editor in Phase 3.</p>
-          </div>
-        </div>
-        <div className="card space-y-5">
-          {IEP_PLACEHOLDERS.map((iep) => (
-            <div
-              key={iep.domain}
-              className="border-l-2 border-coral-300 pl-5 py-1"
-            >
-              <div className="flex items-center justify-between gap-3 flex-wrap">
-                <div>
-                  <span className="chip bg-coral-50 text-coral-700 text-xs">
-                    {iep.domain}
-                  </span>
-                  <p className="font-medium text-sage-900 mt-1.5">{iep.goal}</p>
-                </div>
-                <div className="text-sm text-sage-600">
-                  <span className="font-medium text-sage-900">{iep.progress}%</span>
-                </div>
-              </div>
-              <div className="h-2 bg-sage-100 rounded-full overflow-hidden mt-2">
-                <div
-                  className="h-full bg-sage-500 rounded-full"
-                  style={{ width: `${iep.progress}%` }}
-                />
-              </div>
-              <div className="mt-3 flex flex-wrap gap-1.5">
-                {iep.accommodations.map((a) => (
-                  <span key={a} className="chip bg-mist-50 text-mist-700 text-xs">
-                    {a}
-                  </span>
-                ))}
-              </div>
-            </div>
-          ))}
-        </div>
       </section>
 
       <div className="card bg-cream-100 border-cream-200 flex items-center gap-4 flex-wrap">

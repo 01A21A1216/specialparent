@@ -50,6 +50,18 @@ export class CreateChildDto {
   @IsString({ each: true })
   sensoryTriggers?: string[];
 
+  @ApiProperty({ required: false, type: [String], example: ['weighted blanket', 'counting to 10'] })
+  @IsOptional()
+  @IsArray()
+  @IsString({ each: true })
+  calmingStrategies?: string[];
+
+  @ApiProperty({ required: false, type: [String], example: ['drawing', 'trains'] })
+  @IsOptional()
+  @IsArray()
+  @IsString({ each: true })
+  hobbies?: string[];
+
   @ApiProperty({ required: false, example: 'verbal' })
   @IsOptional()
   @IsString()
@@ -84,6 +96,8 @@ export class UpdateChildDto {
   @IsOptional() @IsArray() @IsString({ each: true }) allergies?: string[];
   @IsOptional() @IsArray() @IsString({ each: true }) medications?: string[];
   @IsOptional() @IsArray() @IsString({ each: true }) sensoryTriggers?: string[];
+  @IsOptional() @IsArray() @IsString({ each: true }) calmingStrategies?: string[];
+  @IsOptional() @IsArray() @IsString({ each: true }) hobbies?: string[];
   @IsOptional() @IsString() communicationType?: string;
   @IsOptional() @IsString() schoolName?: string;
   @IsOptional() @IsString() emergencyContact?: string;

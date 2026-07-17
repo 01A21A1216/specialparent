@@ -24,7 +24,14 @@ export default function ChildrenPage() {
   const [fullName, setFullName] = useState('');
   const [dob, setDob] = useState('');
   const [diagnoses, setDiagnoses] = useState('');
+  const [hobbies, setHobbies] = useState('');
   const [submitting, setSubmitting] = useState(false);
+
+  const csv = (s: string) =>
+    s
+      .split(',')
+      .map((x) => x.trim())
+      .filter(Boolean);
 
   async function load() {
     setLoading(true);
@@ -50,15 +57,14 @@ export default function ChildrenPage() {
         body: {
           fullName,
           dateOfBirth: dob,
-          diagnoses: diagnoses
-            .split(',')
-            .map((s) => s.trim())
-            .filter(Boolean),
+          diagnoses: csv(diagnoses),
+          hobbies: csv(hobbies),
         },
       });
       setFullName('');
       setDob('');
       setDiagnoses('');
+      setHobbies('');
       setShowForm(false);
       await load();
     } catch (err: any) {
@@ -122,6 +128,19 @@ export default function ChildrenPage() {
               placeholder="Autism Spectrum Disorder, Speech delay"
             />
           </div>
+          <div>
+            <label className="label" htmlFor="chobbies">Hobbies & interests (comma-separated, optional)</label>
+            <input
+              id="chobbies"
+              value={hobbies}
+              onChange={(e) => setHobbies(e.target.value)}
+              className="input"
+              placeholder="drawing, trains, music"
+            />
+          </div>
+          <p className="text-xs text-sage-500">
+            You can add allergies, medications, school, emergency contact and more from the profile page after creating.
+          </p>
           <button type="submit" disabled={submitting} className="btn-primary">
             {submitting ? 'Saving…' : 'Create profile'}
           </button>

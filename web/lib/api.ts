@@ -16,7 +16,7 @@ export interface AuthResult {
     id: string;
     email: string;
     fullName: string;
-    role: 'PARENT' | 'THERAPIST' | 'TEACHER' | 'SCHOOL_ADMIN' | 'ADMIN';
+    role: 'PARENT' | 'THERAPIST' | 'DOCTOR' | 'TEACHER' | 'SPECIAL_EDUCATOR' | 'SCHOOL_ADMIN' | 'ADMIN';
     preferredLanguage: string;
     avatarUrl?: string | null;
   };
@@ -89,13 +89,23 @@ export async function api<T = unknown>(path: string, opts: ApiOptions = {}): Pro
   const { method = 'GET', body, auth = true, signal } = opts;
   const url = `${API_BASE}/api${path}`;
 
+  // FormData bodies (file uploads) must NOT be JSON-serialized and must NOT
+  // carry a Content-Type header — the browser sets the multipart boundary.
+  const isFormData = typeof FormData !== 'undefined' && body instanceof FormData;
+
   const doFetch = async (token: string | null): Promise<Response> => {
-    const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+    const headers: Record<string, string> = {};
+    if (!isFormData) headers['Content-Type'] = 'application/json';
     if (auth && token) headers.Authorization = `Bearer ${token}`;
     return fetch(url, {
       method,
       headers,
-      body: body !== undefined ? JSON.stringify(body) : undefined,
+      body:
+        body === undefined
+          ? undefined
+          : isFormData
+            ? (body as FormData)
+            : JSON.stringify(body),
       signal,
     });
   };
@@ -131,6 +141,28 @@ export async function api<T = unknown>(path: string, opts: ApiOptions = {}): Pro
   // 204
   if (res.status === 204) return undefined as T;
   return (await res.json()) as T;
+}
+
+// Authed binary download. Returns the raw Blob so callers can view or save it.
+export async function apiDownload(path: string): Promise<Blob> {
+  const url = `${API_BASE}/api${path}`;
+  let token = getAccessToken();
+  const doFetch = (t: string | null) =>
+    fetch(url, {
+      method: 'GET',
+      headers: t ? { Authorization: `Bearer ${t}` } : {},
+    });
+  let res = await doFetch(token);
+  if (res.status === 401 && getRefreshToken()) {
+    try {
+      token = await refreshAccess();
+      res = await doFetch(token);
+    } catch {
+      /* fall through */
+    }
+  }
+  if (!res.ok) throw new ApiError(res.status, res.statusText || 'Download failed');
+  return res.blob();
 }
 
 // ── Convenience auth methods ────────────────────────────

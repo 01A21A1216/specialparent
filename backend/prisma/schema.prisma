@@ -16,7 +16,9 @@ datasource db {
 enum Role {
   PARENT
   THERAPIST
+  DOCTOR
   TEACHER
+  SPECIAL_EDUCATOR
   SCHOOL_ADMIN
   ADMIN
 }
@@ -66,6 +68,8 @@ model User {
   refreshTokens     RefreshToken[]
   auditLogs         AuditLog[]
   aiMessages        AiMessage[]
+  invitesSent       ChildInvite[]  @relation("InvitesSent")
+  invitesAccepted   ChildInvite[]  @relation("InvitesAccepted")
 
   @@index([role])
 }
@@ -110,6 +114,8 @@ model Child {
   allergies           String[]
   medications         String[]
   sensoryTriggers     String[]
+  calmingStrategies   String[]        // what helps regulate: "weighted blanket", "counting"
+  hobbies             String[]        // "drawing", "trains", "music"
   communicationType   String?         // "verbal", "AAC", "PECS"
   schoolName          String?
   emergencyContact    String?
@@ -123,8 +129,53 @@ model Child {
   appointments        Appointment[]
   goals               Goal[]
   moodEntries         MoodEntry[]
+  diagnosticReports   DiagnosticReport[]
+  invites             ChildInvite[]
 
   @@index([fullName])
+}
+
+// ─── Care-team invites ─────────────────────────────────────
+// Parent generates a token-based link. Anyone who opens the link
+// sees the invite metadata, signs up (or logs in), then accepts.
+// Accepting creates a Caregiver row that links them to the child.
+
+model ChildInvite {
+  id             String    @id @default(cuid())
+  childId        String
+  child          Child     @relation(fields: [childId], references: [id], onDelete: Cascade)
+  invitedById    String
+  invitedBy      User      @relation("InvitesSent", fields: [invitedById], references: [id], onDelete: Cascade)
+  token          String    @unique  // URL-safe random, distributed by the parent
+  role           Role      // expected role of the invitee (THERAPIST, DOCTOR, TEACHER, SPECIAL_EDUCATOR, etc.)
+  relationship   String    // display label e.g. "primary speech therapist", "pediatrician"
+  email          String?   // optional prefilled invitee email
+  expiresAt      DateTime
+  acceptedAt     DateTime?
+  acceptedById   String?
+  acceptedBy     User?     @relation("InvitesAccepted", fields: [acceptedById], references: [id], onDelete: SetNull)
+  revokedAt      DateTime?
+  createdAt      DateTime  @default(now())
+
+  @@index([childId])
+  @@index([token])
+}
+
+model DiagnosticReport {
+  id             String   @id @default(cuid())
+  childId        String
+  child          Child    @relation(fields: [childId], references: [id], onDelete: Cascade)
+  title          String
+  description    String?
+  fileName       String   // original filename (as uploaded)
+  filePath       String   // path relative to backend/uploads/
+  fileSize       Int
+  mimeType       String
+  uploadedById   String?  // nullable so reports survive if user is deleted
+  uploadedByName String?  // display snapshot
+  createdAt      DateTime @default(now())
+
+  @@index([childId, createdAt])
 }
 
 model Caregiver {
