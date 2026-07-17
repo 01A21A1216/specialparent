@@ -452,7 +452,7 @@ export default function PlatformPage() {
             <Link href="/security" className="hover:text-sage-900 min-h-fit py-1">Security</Link>
           </nav>
           <div className="flex items-center gap-2">
-            <Link href="/login" className="btn-ghost hidden sm:inline-flex">Sign in</Link>
+            <Link href="/login" className="btn-ghost">Sign in</Link>
             <Link href="/signup" className="btn-primary">Get started</Link>
           </div>
         </div>

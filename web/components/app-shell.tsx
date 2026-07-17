@@ -155,29 +155,58 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             })}
           </nav>
 
-          <div className="border-t border-sage-100 px-5 py-4">
-            <div className="flex items-center gap-3 mb-3">
-              <div className="w-10 h-10 rounded-full bg-coral-200 text-coral-700 grid place-items-center font-semibold">
-                {initials(user.fullName)}
-              </div>
-              <div className="min-w-0 flex-1">
-                <div className="text-sm font-medium text-sage-900 truncate">
-                  {user.fullName}
+          <div className="border-t border-sage-100 p-3">
+            <div className="flex items-center gap-2">
+              <Link
+                href="/profile"
+                className={cn(
+                  'flex-1 min-w-0 flex items-center gap-3 px-3 py-2.5 rounded-2xl transition-colors',
+                  pathname === '/profile' || pathname?.startsWith('/profile/')
+                    ? 'bg-sage-600 text-cream-50 shadow-soft'
+                    : 'text-sage-800 hover:bg-sage-100',
+                )}
+              >
+                {user.avatarUrl ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={user.avatarUrl}
+                    alt=""
+                    className="w-10 h-10 rounded-full object-cover flex-shrink-0 bg-coral-100"
+                  />
+                ) : (
+                  <div className="w-10 h-10 rounded-full bg-coral-200 text-coral-700 grid place-items-center font-semibold flex-shrink-0">
+                    {initials(user.fullName)}
+                  </div>
+                )}
+                <div className="min-w-0 flex-1">
+                  <div className="text-sm font-medium truncate">
+                    {user.fullName}
+                  </div>
+                  <div
+                    className={cn(
+                      'text-xs capitalize truncate',
+                      pathname === '/profile' || pathname?.startsWith('/profile/')
+                        ? 'text-cream-100/80'
+                        : 'text-sage-500',
+                    )}
+                  >
+                    {user.role.toLowerCase().replace('_', ' ')} · View profile
+                  </div>
                 </div>
-                <div className="text-xs text-sage-500 capitalize truncate">
-                  {user.role.toLowerCase().replace('_', ' ')}
-                </div>
-              </div>
+              </Link>
+              <button
+                type="button"
+                onClick={async () => {
+                  await logout();
+                  router.replace('/');
+                }}
+                title="Sign out"
+                aria-label="Sign out"
+                className="flex-shrink-0 w-11 h-11 rounded-2xl grid place-items-center text-sage-600 hover:bg-coral-50 hover:text-coral-700 transition-colors"
+              >
+                <SignoutIcon className="w-5 h-5" />
+              </button>
             </div>
-            <button
-              onClick={async () => {
-                await logout();
-                router.replace('/');
-              }}
-              className="btn-ghost w-full text-sm"
-            >
-              Sign out
-            </button>
           </div>
         </aside>
 
@@ -312,6 +341,14 @@ function EmergencyIcon({ className }: { className?: string }) {
     <svg viewBox="0 0 24 24" fill="none" className={className} aria-hidden="true">
       <path d="M12 2 L4 6v6c0 5 4 8 8 10 4-2 8-5 8-10V6l-8-4z" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" />
       <path d="M12 8v4M12 15v.5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+    </svg>
+  );
+}
+function SignoutIcon({ className }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" className={className} aria-hidden="true">
+      <path d="M10 4H6a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M16 8l4 4-4 4M20 12H10" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
   );
 }

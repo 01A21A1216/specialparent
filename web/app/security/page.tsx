@@ -121,7 +121,7 @@ export default function SecurityPage() {
             <Link href="/security" className="text-sage-900 font-medium min-h-fit py-1">Security</Link>
           </nav>
           <div className="flex items-center gap-2">
-            <Link href="/login" className="btn-ghost hidden sm:inline-flex">Sign in</Link>
+            <Link href="/login" className="btn-ghost">Sign in</Link>
             <Link href="/signup" className="btn-primary">Get started</Link>
           </div>
         </div>

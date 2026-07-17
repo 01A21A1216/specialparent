@@ -130,7 +130,7 @@ export class InvitesService {
     const inv = await this.prisma.childInvite.findUnique({
       where: { token },
       include: {
-        child: { select: { fullName: true } },
+        child: { select: { id: true, fullName: true } },
         invitedBy: { select: { fullName: true } },
       },
     });
@@ -143,6 +143,7 @@ export class InvitesService {
           ? 'expired'
           : 'pending';
     return {
+      childId: inv.child.id,
       childFullName: inv.child.fullName,
       invitedByName: inv.invitedBy.fullName,
       role: inv.role,

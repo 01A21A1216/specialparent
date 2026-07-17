@@ -9,6 +9,7 @@ import { useAuth } from '../../../components/auth-provider';
 type InviteStatus = 'pending' | 'accepted' | 'revoked' | 'expired';
 
 interface InvitePreview {
+  childId: string;
   childFullName: string;
   invitedByName: string;
   role: string;
@@ -36,6 +37,8 @@ export default function InviteAcceptPage() {
   const [loading, setLoading] = useState(true);
   const [accepting, setAccepting] = useState(false);
   const [acceptErr, setAcceptErr] = useState<string | null>(null);
+  const [alreadyLinked, setAlreadyLinked] = useState(false);
+  const [checkingLink, setCheckingLink] = useState(false);
 
   useEffect(() => {
     if (!params.token) return;
@@ -45,6 +48,20 @@ export default function InviteAcceptPage() {
       .catch((e: any) => setLoadErr(e?.message || 'Invite not found'))
       .finally(() => setLoading(false));
   }, [params.token]);
+
+  // If the viewer is signed in, see whether they're already a caregiver of
+  // this child — 200 = access = already linked; 403/404 = not linked.
+  useEffect(() => {
+    if (!preview || !user || preview.status !== 'pending') {
+      setAlreadyLinked(false);
+      return;
+    }
+    setCheckingLink(true);
+    api(`/children/${preview.childId}`)
+      .then(() => setAlreadyLinked(true))
+      .catch(() => setAlreadyLinked(false))
+      .finally(() => setCheckingLink(false));
+  }, [preview, user]);
 
   async function accept() {
     setAccepting(true);
@@ -140,7 +157,43 @@ export default function InviteAcceptPage() {
                       {acceptErr}
                     </div>
                   )}
-                  {user ? (
+                  {user && alreadyLinked ? (
+                    <>
+                      <div className="rounded-2xl bg-sage-50 border border-sage-200 text-sage-800 p-4 text-sm mb-4">
+                        You're signed in as <strong>{user.fullName}</strong> and
+                        already on {preview.childFullName}'s care team, so this
+                        invite isn't meant for you. Share the link (via
+                        WhatsApp / email / in person) with{' '}
+                        {preview.email ? (
+                          <>
+                            <strong>{preview.email}</strong>
+                          </>
+                        ) : (
+                          <>the {roleLabel} you invited</>
+                        )}
+                        , and have them sign in as themselves before opening it.
+                      </div>
+                      <div className="grid gap-2">
+                        <button
+                          onClick={() => {
+                            const url = `${window.location.origin}${returnPath}`;
+                            navigator.clipboard
+                              ?.writeText(url)
+                              .catch(() => window.prompt('Copy this link:', url));
+                          }}
+                          className="btn-primary text-center"
+                        >
+                          Copy invite link
+                        </button>
+                        <Link
+                          href={`/children/${preview.childId}`}
+                          className="btn-ghost text-center"
+                        >
+                          Open {preview.childFullName}'s profile
+                        </Link>
+                      </div>
+                    </>
+                  ) : user ? (
                     <>
                       <p className="text-sm text-sage-600 mb-3">
                         Signed in as <strong>{user.fullName}</strong> (
@@ -148,12 +201,14 @@ export default function InviteAcceptPage() {
                       </p>
                       <button
                         onClick={accept}
-                        disabled={accepting}
+                        disabled={accepting || checkingLink}
                         className="btn-primary w-full text-lg justify-center"
                       >
                         {accepting
                           ? 'Accepting…'
-                          : `Accept and open ${preview.childFullName}'s profile`}
+                          : checkingLink
+                            ? 'Checking…'
+                            : `Accept and open ${preview.childFullName}'s profile`}
                       </button>
                     </>
                   ) : (

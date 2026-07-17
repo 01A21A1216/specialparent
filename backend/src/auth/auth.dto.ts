@@ -58,3 +58,43 @@ export class RefreshDto {
   @IsString()
   refreshToken!: string;
 }
+
+export class UpdateMeDto {
+  @ApiProperty({ required: false })
+  @IsOptional()
+  @IsString()
+  @MinLength(2)
+  @MaxLength(120)
+  fullName?: string;
+
+  @ApiProperty({ required: false, example: '+919876543210' })
+  @IsOptional()
+  @IsString()
+  @MaxLength(30)
+  phone?: string;
+
+  @ApiProperty({ enum: Language, required: false })
+  @IsOptional()
+  @IsEnum(Language)
+  preferredLanguage?: Language;
+
+  @ApiProperty({ required: false, description: 'https:// URL to an avatar image' })
+  @IsOptional()
+  @IsString()
+  @MaxLength(500)
+  avatarUrl?: string;
+}
+
+export class ChangePasswordDto {
+  @ApiProperty()
+  @IsString()
+  @MinLength(8)
+  @MaxLength(128)
+  currentPassword!: string;
+
+  @ApiProperty()
+  @IsString()
+  @MinLength(8)
+  @MaxLength(128)
+  newPassword!: string;
+}

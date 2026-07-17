@@ -67,14 +67,18 @@ export default function ResourceDetailPage() {
           if (line.startsWith('- ')) {
             return (
               <p key={i} className="ml-5 relative before:content-['•'] before:absolute before:-left-4 before:text-coral-500">
-                {line.slice(2)}
+                {renderBold(line.slice(2))}
               </p>
             );
           }
-          if (/^\d+\.\s/.test(line)) {
+          const numbered = line.match(/^(\d+)\.\s+(.*)$/);
+          if (numbered) {
             return (
-              <p key={i} className="ml-5">
-                {line}
+              <p key={i} className="ml-6 relative">
+                <span className="absolute -left-6 text-coral-500 font-medium">
+                  {numbered[1]}.
+                </span>
+                {renderBold(numbered[2])}
               </p>
             );
           }

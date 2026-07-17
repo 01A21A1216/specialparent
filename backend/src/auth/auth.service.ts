@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   ConflictException,
   Injectable,
   UnauthorizedException,
@@ -8,7 +9,7 @@ import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcryptjs';
 import * as crypto from 'crypto';
 import { PrismaService } from '../prisma/prisma.service';
-import { LoginDto, SignupDto } from './auth.dto';
+import { ChangePasswordDto, LoginDto, SignupDto, UpdateMeDto } from './auth.dto';
 
 export interface TokenPair {
   accessToken: string;
@@ -108,16 +109,59 @@ export class AuthService {
     });
   }
 
+  async updateMe(userId: string, dto: UpdateMeDto) {
+    // Trim/normalise light fields; treat empty string as "clear" for nullable fields.
+    const data: Record<string, unknown> = {};
+    if (dto.fullName !== undefined) data.fullName = dto.fullName.trim();
+    if (dto.phone !== undefined) data.phone = dto.phone.trim() || null;
+    if (dto.preferredLanguage !== undefined) data.preferredLanguage = dto.preferredLanguage;
+    if (dto.avatarUrl !== undefined) data.avatarUrl = dto.avatarUrl.trim() || null;
+    return this.prisma.user.update({
+      where: { id: userId },
+      data,
+      select: this.userSelect(),
+    });
+  }
+
+  async changePassword(userId: string, dto: ChangePasswordDto) {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: { id: true, passwordHash: true },
+    });
+    if (!user) throw new UnauthorizedException();
+    const ok = await bcrypt.compare(dto.currentPassword, user.passwordHash);
+    if (!ok) throw new BadRequestException('Current password is incorrect');
+    if (dto.newPassword === dto.currentPassword) {
+      throw new BadRequestException('New password must differ from the current one');
+    }
+    const passwordHash = await bcrypt.hash(dto.newPassword, 12);
+    // Also invalidate every existing refresh token — signs the user out of
+    // any other browsers / devices.
+    await this.prisma.$transaction([
+      this.prisma.user.update({
+        where: { id: userId },
+        data: { passwordHash },
+      }),
+      this.prisma.refreshToken.updateMany({
+        where: { userId, revokedAt: null },
+        data: { revokedAt: new Date() },
+      }),
+    ]);
+    return { ok: true };
+  }
+
   // ── helpers ────────────────────────────────────────────
   private userSelect() {
     return {
       id: true,
       email: true,
       fullName: true,
+      phone: true,
       role: true,
       preferredLanguage: true,
       avatarUrl: true,
       createdAt: true,
+      lastLoginAt: true,
     } as const;
   }
 
