@@ -70,6 +70,7 @@ model User {
   aiMessages        AiMessage[]
   invitesSent       ChildInvite[]  @relation("InvitesSent")
   invitesAccepted   ChildInvite[]  @relation("InvitesAccepted")
+  behaviorEvents    BehaviorEvent[] @relation("BehaviorEventsLogged")
 
   @@index([role])
 }
@@ -131,6 +132,7 @@ model Child {
   moodEntries         MoodEntry[]
   diagnosticReports   DiagnosticReport[]
   invites             ChildInvite[]
+  behaviorEvents      BehaviorEvent[]
 
   @@index([fullName])
 }
@@ -245,6 +247,39 @@ model MoodEntry {
   createdAt DateTime @default(now())
 
   @@index([childId, loggedAt])
+}
+
+// ─── Behavior events ───────────────────────────────────────────────────────
+// A single log for triggers, meltdowns, sleep, food, routine changes — every
+// kind of "what happened today?" observation a caregiver wants to record.
+
+enum BehaviorEventKind {
+  TRIGGER      // observed sensory / environmental trigger
+  MELTDOWN     // full meltdown or dysregulation event
+  SLEEP        // bedtime, wake, night waking, nap
+  FOOD         // refusal, new food tried, appetite change
+  ROUTINE      // routine change or disruption
+  OTHER
+}
+
+model BehaviorEvent {
+  id           String            @id @default(cuid())
+  childId      String
+  child        Child             @relation(fields: [childId], references: [id], onDelete: Cascade)
+  loggedById   String?
+  loggedBy     User?             @relation("BehaviorEventsLogged", fields: [loggedById], references: [id], onDelete: SetNull)
+  kind         BehaviorEventKind
+  occurredAt   DateTime          // when the event happened (may differ from createdAt)
+  durationMins Int?              // for meltdowns / sleep sessions
+  severity     Int?              // 1–5, optional (mostly for meltdowns)
+  trigger      String?           // free-form "what triggered it"
+  helped       String?           // free-form "what helped"
+  note         String?           // additional context
+  createdAt    DateTime          @default(now())
+  updatedAt    DateTime          @updatedAt
+
+  @@index([childId, occurredAt])
+  @@index([childId, kind])
 }
 
 // ─── Therapy & Goals ───────────────────────────────────────────────────────

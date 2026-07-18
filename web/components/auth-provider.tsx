@@ -43,11 +43,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     (async () => {
-      const hasToken =
-        typeof window !== 'undefined' && localStorage.getItem('sp_access');
-      if (hasToken) {
-        await refresh();
-      }
+      // With httpOnly cookies, JS can't see if there's a session. Ask the
+      // server — it's cheap and fails fast for anonymous visitors.
+      await refresh();
       setLoading(false);
     })();
   }, [refresh]);

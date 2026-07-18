@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { api } from '../../../lib/api';
-import { useApi } from '../../../lib/swr';
+import { useApi, mutateGlobal } from '../../../lib/swr';
 import { formatDateTime } from '../../../lib/utils';
 
 interface UpcomingSession {
@@ -48,6 +48,7 @@ export default function TherapyPage() {
   const [duration, setDuration] = useState(45);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
 
   // Default the form's child to the first one available once children load.
   useEffect(() => {
@@ -58,19 +59,36 @@ export default function TherapyPage() {
     e.preventDefault();
     setSubmitting(true);
     setError(null);
+    setSuccess(null);
     try {
-      await api('/therapy/sessions', {
-        method: 'POST',
-        body: {
-          childId,
-          type,
-          scheduledAt: new Date(when).toISOString(),
-          durationMins: duration,
+      const scheduledAt = new Date(when);
+      const isPast = scheduledAt.getTime() < Date.now();
+      const created = await api<{ id: string; scheduledAt: string }>(
+        '/therapy/sessions',
+        {
+          method: 'POST',
+          body: {
+            childId,
+            type,
+            scheduledAt: scheduledAt.toISOString(),
+            durationMins: duration,
+          },
         },
-      });
+      );
       setWhen('');
       setShowForm(false);
-      await mutateUpcoming();
+      // Invalidate every view that reads therapy sessions so the new row shows
+      // up immediately on the dashboard, upcoming list, and per-child page.
+      await Promise.all([
+        mutateUpcoming(),
+        mutateGlobal('/users/dashboard'),
+        mutateGlobal(`/therapy/sessions?childId=${childId}`),
+      ]);
+      setSuccess(
+        isPast
+          ? `Saved. Note: this time is in the past, so it won't appear in "Upcoming" — view it on the child's Therapy tab.`
+          : `Session scheduled for ${formatDateTime(created.scheduledAt)}.`,
+      );
     } catch (err: any) {
       setError(err?.message ?? 'Could not schedule');
     } finally {
@@ -142,6 +160,20 @@ export default function TherapyPage() {
             {submitting ? 'Scheduling…' : 'Schedule'}
           </button>
         </form>
+      )}
+
+      {success && !showForm && (
+        <div className="rounded-2xl bg-sage-50 border border-sage-200 text-sage-800 p-4 text-sm flex items-start justify-between gap-4">
+          <span>✓ {success}</span>
+          <button
+            type="button"
+            onClick={() => setSuccess(null)}
+            className="text-sage-500 hover:text-sage-800"
+            aria-label="Dismiss"
+          >
+            ×
+          </button>
+        </div>
       )}
 
       <section>

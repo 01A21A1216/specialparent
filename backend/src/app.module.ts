@@ -20,9 +20,11 @@ import { AdminModule } from './admin/admin.module';
 import { ReportsModule } from './reports/reports.module';
 import { InvitesModule } from './invites/invites.module';
 import { CaregiversModule } from './caregivers/caregivers.module';
+import { BehaviorModule } from './behavior/behavior.module';
 import { HealthController } from './common/health.controller';
 import { AuditInterceptor } from './common/audit.interceptor';
 import { CacheModule } from './common/cache/cache.module';
+import { StorageModule } from './common/storage/storage.module';
 
 @Module({
   imports: [
@@ -33,6 +35,7 @@ import { CacheModule } from './common/cache/cache.module';
     ]),
     PrismaModule,
     CacheModule,
+    StorageModule,
     AuthModule,
     UsersModule,
     ChildrenModule,
@@ -49,6 +52,7 @@ import { CacheModule } from './common/cache/cache.module';
     ReportsModule,
     InvitesModule,
     CaregiversModule,
+    BehaviorModule,
   ],
   controllers: [HealthController],
   providers: [

@@ -5,12 +5,14 @@ import {
   Module,
   Param,
   Post,
+  Query,
   UseGuards,
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiProperty, ApiTags } from '@nestjs/swagger';
-import { IsOptional, IsString, MaxLength, MinLength } from 'class-validator';
+import { IsString, MaxLength, MinLength } from 'class-validator';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { CurrentUser, AuthUser } from '../common/current-user.decorator';
+import { ChildAccess } from '../common/child-access';
 import { AiService } from './ai.service';
 
 class ChatDto {
@@ -41,11 +43,19 @@ export class AiController {
   thread(@CurrentUser() user: AuthUser, @Param('threadId') threadId: string) {
     return this.ai.listThread(user, threadId);
   }
+
+  @Get('recommendations')
+  recommendations(
+    @CurrentUser() user: AuthUser,
+    @Query('childId') childId: string,
+  ) {
+    return this.ai.recommendationsForChild(user, childId);
+  }
 }
 
 @Module({
   controllers: [AiController],
-  providers: [AiService],
+  providers: [AiService, ChildAccess],
   exports: [AiService],
 })
 export class AiModule {}

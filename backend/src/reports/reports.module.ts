@@ -27,7 +27,10 @@ import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { CurrentUser, AuthUser } from '../common/current-user.decorator';
 import { ChildAccess } from '../common/child-access';
 import { PrismaService } from '../prisma/prisma.service';
+import { StorageService } from '../common/storage/storage.module';
 
+// Multer still writes uploads here first. StorageService then either leaves
+// them in place (local mode) or uploads to Cloudinary and cleans up (cloud mode).
 const UPLOAD_ROOT = path.join(process.cwd(), 'uploads', 'reports');
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10 MB
 const ALLOWED_MIME = new Set([
@@ -60,6 +63,7 @@ export class ReportsService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly access: ChildAccess,
+    private readonly storage: StorageService,
   ) {}
 
   async list(user: AuthUser, childId: string) {
@@ -88,9 +92,7 @@ export class ReportsService {
           `Unsupported file type. Allowed: PDF, JPG, PNG, WebP.`,
         );
       }
-      const relPath = path
-        .relative(path.join(process.cwd(), 'uploads'), file.path)
-        .replace(/\\/g, '/');
+      const stored = await this.storage.save(childId, file);
       // Snapshot uploader name from the user record so the report keeps
       // attribution even if the user is later deleted or renamed.
       const uploader = await this.prisma.user.findUnique({
@@ -103,9 +105,9 @@ export class ReportsService {
           title: dto.title,
           description: dto.description,
           fileName: file.originalname,
-          filePath: relPath,
-          fileSize: file.size,
-          mimeType: file.mimetype,
+          filePath: stored.storagePath,
+          fileSize: stored.size,
+          mimeType: stored.mimeType,
           uploadedById: user.id,
           uploadedByName: uploader?.fullName ?? user.email,
         },
@@ -122,11 +124,16 @@ export class ReportsService {
     });
     if (!report) throw new NotFoundException('Report not found');
     await this.access.assertCaregiver(user.id, user.role, report.childId);
-    const abs = path.join(process.cwd(), 'uploads', report.filePath);
-    if (!fs.existsSync(abs)) {
-      throw new NotFoundException('File missing on disk');
+    try {
+      const result = await this.storage.download(
+        report.filePath,
+        report.mimeType,
+        report.fileSize,
+      );
+      return { report, ...result };
+    } catch {
+      throw new NotFoundException('File not available');
     }
-    return { report, absolutePath: abs };
   }
 
   async remove(user: AuthUser, id: string) {
@@ -135,9 +142,9 @@ export class ReportsService {
     });
     if (!report) return { ok: true };
     await this.access.assertCaregiver(user.id, user.role, report.childId);
-    const abs = path.join(process.cwd(), 'uploads', report.filePath);
     await this.prisma.diagnosticReport.delete({ where: { id } });
-    fs.promises.unlink(abs).catch(() => {}); // best-effort
+    // Best-effort file cleanup.
+    this.storage.delete(report.filePath).catch(() => {});
     return { ok: true };
   }
 }
@@ -200,15 +207,26 @@ export class ReportsController {
     @Param('id') id: string,
     @Res({ passthrough: true }) res: Response,
   ) {
-    const { report, absolutePath } = await this.svc.findForDownload(user, id);
-    // Filename with fallback ASCII + RFC 5987 UTF-8 form so non-latin names survive.
+    const { report, stream, redirectUrl } = await this.svc.findForDownload(
+      user,
+      id,
+    );
+
+    if (redirectUrl) {
+      // Cloudinary path: 302 to the signed URL (5-min expiry). Browser follows
+      // the redirect and gets the file directly from Cloudinary.
+      res.redirect(302, redirectUrl);
+      return;
+    }
+
+    // Local path: stream the file.
     const asciiName = report.fileName.replace(/[^\x20-\x7E]/g, '_');
     res.set({
       'Content-Type': report.mimeType,
       'Content-Disposition': `inline; filename="${asciiName}"; filename*=UTF-8''${encodeURIComponent(report.fileName)}`,
       'Content-Length': String(report.fileSize),
     });
-    return new StreamableFile(fs.createReadStream(absolutePath));
+    return new StreamableFile(stream!);
   }
 
   @Delete('reports/:id')

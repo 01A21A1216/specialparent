@@ -53,23 +53,29 @@ export function clearTokens() {
 
 let refreshing: Promise<string> | null = null;
 
-async function refreshAccess(): Promise<string> {
+async function refreshAccess(): Promise<string | null> {
   if (refreshing) return refreshing;
   const rt = getRefreshToken();
-  if (!rt) throw new ApiError(401, 'No refresh token');
   refreshing = (async () => {
     const res = await fetch(`${API_BASE}/api/auth/refresh`, {
       method: 'POST',
+      // Send the sp_refresh cookie automatically; body only used if the
+      // caller has a legacy localStorage token.
+      credentials: 'include',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ refreshToken: rt }),
+      body: rt ? JSON.stringify({ refreshToken: rt }) : '{}',
     });
     if (!res.ok) {
       clearTokens();
       throw new ApiError(res.status, 'Refresh failed');
     }
     const data = await res.json();
-    setTokens(data.accessToken, data.refreshToken);
-    return data.accessToken as string;
+    // Cookies are set by the backend; keep localStorage in sync as a
+    // fallback for older sessions still using Authorization headers.
+    if (data.accessToken && data.refreshToken) {
+      setTokens(data.accessToken, data.refreshToken);
+    }
+    return (data.accessToken as string) ?? null;
   })();
   try {
     return await refreshing;
@@ -96,10 +102,14 @@ export async function api<T = unknown>(path: string, opts: ApiOptions = {}): Pro
   const doFetch = async (token: string | null): Promise<Response> => {
     const headers: Record<string, string> = {};
     if (!isFormData) headers['Content-Type'] = 'application/json';
+    // Legacy: Authorization header still supported by backend as a fallback.
+    // Primary path is now the sp_access httpOnly cookie which the browser
+    // sends automatically because of credentials:'include' below.
     if (auth && token) headers.Authorization = `Bearer ${token}`;
     return fetch(url, {
       method,
       headers,
+      credentials: 'include',
       body:
         body === undefined
           ? undefined

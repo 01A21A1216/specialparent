@@ -54,9 +54,13 @@ export class LoginDto {
 }
 
 export class RefreshDto {
-  @ApiProperty()
+  @ApiProperty({
+    required: false,
+    description: 'Refresh token — optional if the sp_refresh cookie is set',
+  })
+  @IsOptional()
   @IsString()
-  refreshToken!: string;
+  refreshToken?: string;
 }
 
 export class UpdateMeDto {

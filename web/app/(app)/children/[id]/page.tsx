@@ -6,6 +6,7 @@ import { useEffect, useState } from 'react';
 import { api } from '../../../../lib/api';
 import { ageInYears, formatDate, initials } from '../../../../lib/utils';
 import { useAuth } from '../../../../components/auth-provider';
+import { BehaviorTab } from './_components/behavior-tab';
 import { CareTeamSection } from './_components/care-team-section';
 import { EditProfilePanel } from './_components/edit-profile-panel';
 import { Field } from './_components/field';
@@ -17,7 +18,7 @@ import { ReportsTab } from './_components/reports-tab';
 import { SessionsTab } from './_components/sessions-tab';
 import { ChildDetail } from './_components/types';
 
-type TabKey = 'milestones' | 'goals' | 'sessions' | 'mood' | 'reports';
+type TabKey = 'milestones' | 'goals' | 'sessions' | 'mood' | 'behavior' | 'reports';
 
 export default function ChildDetailPage() {
   const params = useParams<{ id: string }>();
@@ -150,6 +151,7 @@ export default function ChildDetailPage() {
             ['goals', `Goals (${child.goals.length})`],
             ['sessions', `Sessions (${child.therapySessions.length})`],
             ['mood', `Mood (${child.moodEntries.length})`],
+            ['behavior', 'Behavior'],
             ['reports', `Reports (${child.diagnosticReports.length})`],
           ] as const
         ).map(([key, label]) => (
@@ -173,6 +175,7 @@ export default function ChildDetailPage() {
       {tab === 'goals' && <GoalsTab childId={child.id} goals={child.goals} onChange={load} />}
       {tab === 'sessions' && <SessionsTab sessions={child.therapySessions} />}
       {tab === 'mood' && <MoodTab childId={child.id} moods={child.moodEntries} onChange={load} />}
+      {tab === 'behavior' && <BehaviorTab childId={child.id} />}
       {tab === 'reports' && (
         <ReportsTab childId={child.id} reports={child.diagnosticReports} onChange={load} />
       )}

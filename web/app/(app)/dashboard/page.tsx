@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { useAuth } from '../../../components/auth-provider';
 import { useApi } from '../../../lib/swr';
 import { ageInYears, formatDateTime, initials } from '../../../lib/utils';
+import { AiRecommendationsTile } from './_components/ai-recommendations';
 
 interface DashboardData {
   children: Array<{
@@ -155,6 +156,11 @@ export default function DashboardPage() {
               </Link>
             </div>
           </section>
+
+          {/* AI ideas — parents only, when at least one child exists */}
+          {role === 'PARENT' && data?.children?.[0] && (
+            <AiRecommendationsTile childId={data.children[0].id} />
+          )}
 
           <div className="grid lg:grid-cols-2 gap-6">
             {/* Upcoming sessions */}

@@ -6,10 +6,12 @@ import {
   Patch,
   Post,
   Req,
+  Res,
+  UnauthorizedException,
   UseGuards,
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
-import type { Request } from 'express';
+import type { Request, Response } from 'express';
 import { AuthService } from './auth.service';
 import {
   ChangePasswordDto,
@@ -20,6 +22,11 @@ import {
 } from './auth.dto';
 import { JwtAuthGuard } from './jwt-auth.guard';
 import { CurrentUser, AuthUser } from '../common/current-user.decorator';
+import {
+  clearAuthCookies,
+  REFRESH_COOKIE_NAME,
+  setAuthCookies,
+} from './cookies';
 
 @ApiTags('auth')
 @Controller('auth')
@@ -28,32 +35,63 @@ export class AuthController {
 
   @Post('signup')
   @ApiOperation({ summary: 'Create a new account' })
-  signup(@Body() dto: SignupDto) {
-    return this.auth.signup(dto);
+  async signup(
+    @Body() dto: SignupDto,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    const result = await this.auth.signup(dto);
+    setAuthCookies(res, result);
+    return result;
   }
 
   @Post('login')
   @HttpCode(200)
   @ApiOperation({ summary: 'Email + password login' })
-  login(@Body() dto: LoginDto, @Req() req: Request) {
-    return this.auth.login(dto, {
+  async login(
+    @Body() dto: LoginDto,
+    @Req() req: Request,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    const result = await this.auth.login(dto, {
       ip: req.ip,
       ua: req.headers['user-agent'] as string | undefined,
     });
+    setAuthCookies(res, result);
+    return result;
   }
 
   @Post('refresh')
   @HttpCode(200)
   @ApiOperation({ summary: 'Rotate refresh token, get new access token' })
-  refresh(@Body() dto: RefreshDto) {
-    return this.auth.refresh(dto.refreshToken);
+  async refresh(
+    @Body() dto: RefreshDto,
+    @Req() req: Request,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    // Prefer the refresh cookie; fall back to a body token for legacy clients.
+    const token: string | undefined =
+      (req.cookies as Record<string, string> | undefined)?.[REFRESH_COOKIE_NAME] ??
+      dto?.refreshToken;
+    if (!token) throw new UnauthorizedException('No refresh token');
+    const result = await this.auth.refresh(token);
+    setAuthCookies(res, result);
+    return result;
   }
 
   @Post('logout')
   @HttpCode(200)
   @ApiOperation({ summary: 'Revoke refresh token' })
-  logout(@Body() dto: RefreshDto) {
-    return this.auth.logout(dto.refreshToken);
+  async logout(
+    @Body() dto: RefreshDto,
+    @Req() req: Request,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    const token: string | undefined =
+      (req.cookies as Record<string, string> | undefined)?.[REFRESH_COOKIE_NAME] ??
+      dto?.refreshToken;
+    clearAuthCookies(res);
+    if (!token) return { ok: true };
+    return this.auth.logout(token);
   }
 
   @Get('me')
