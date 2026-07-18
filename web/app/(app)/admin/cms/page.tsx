@@ -1,8 +1,9 @@
 'use client';
 
 import Link from 'next/link';
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { api } from '../../../../lib/api';
+import { useApi } from '../../../../lib/swr';
 import { formatDateTime } from '../../../../lib/utils';
 
 interface Resource {
@@ -80,22 +81,14 @@ export default function AdminCms() {
 
 // ─── Resources panel ───────────────────────────────────────
 function ResourcesPanel() {
-  const [items, setItems] = useState<Resource[]>([]);
+  const {
+    data: items = [],
+    isLoading: loading,
+    error,
+    mutate,
+  } = useApi<Resource[]>('/admin/resources');
   const [editing, setEditing] = useState<Resource | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [err, setErr] = useState<string | null>(null);
-
-  async function load() {
-    setLoading(true);
-    try {
-      setItems(await api<Resource[]>('/admin/resources'));
-    } catch (e: any) {
-      setErr(e?.message || 'Failed to load.');
-    } finally {
-      setLoading(false);
-    }
-  }
-  useEffect(() => { load(); }, []);
+  const [err, setErr] = useState<string | null>(error?.message ?? null);
 
   async function save(form: any) {
     setErr(null);
@@ -105,7 +98,7 @@ function ResourcesPanel() {
         body: form,
       });
       setEditing(null);
-      await load();
+      await mutate();
     } catch (e: any) {
       setErr(e?.message || 'Save failed.');
     }
@@ -115,7 +108,7 @@ function ResourcesPanel() {
     if (!confirm('Delete this resource permanently?')) return;
     try {
       await api(`/admin/resources/${id}`, { method: 'DELETE' });
-      await load();
+      await mutate();
     } catch (e: any) {
       setErr(e?.message || 'Delete failed.');
     }
@@ -324,29 +317,21 @@ function ResourceForm({
 
 // ─── Schemes panel ─────────────────────────────────────────
 function SchemesPanel() {
-  const [items, setItems] = useState<Scheme[]>([]);
+  const {
+    data: items = [],
+    isLoading: loading,
+    error,
+    mutate,
+  } = useApi<Scheme[]>('/admin/schemes');
   const [editing, setEditing] = useState<Scheme | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [err, setErr] = useState<string | null>(null);
-
-  async function load() {
-    setLoading(true);
-    try {
-      setItems(await api<Scheme[]>('/admin/schemes'));
-    } catch (e: any) {
-      setErr(e?.message || 'Failed to load.');
-    } finally {
-      setLoading(false);
-    }
-  }
-  useEffect(() => { load(); }, []);
+  const [err, setErr] = useState<string | null>(error?.message ?? null);
 
   async function save(form: any) {
     setErr(null);
     try {
       await api<Scheme>('/admin/schemes', { method: 'POST', body: form });
       setEditing(null);
-      await load();
+      await mutate();
     } catch (e: any) {
       setErr(e?.message || 'Save failed.');
     }
@@ -356,7 +341,7 @@ function SchemesPanel() {
     if (!confirm('Delete this scheme?')) return;
     try {
       await api(`/admin/schemes/${id}`, { method: 'DELETE' });
-      await load();
+      await mutate();
     } catch (e: any) {
       setErr(e?.message || 'Delete failed.');
     }

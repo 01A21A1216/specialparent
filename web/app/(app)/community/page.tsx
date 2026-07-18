@@ -1,8 +1,9 @@
 'use client';
 
 import Link from 'next/link';
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { api } from '../../../lib/api';
+import { useApi } from '../../../lib/swr';
 import { formatDateTime, initials } from '../../../lib/utils';
 
 interface Post {
@@ -26,8 +27,8 @@ const CATEGORY_LABEL: Record<string, string> = {
 };
 
 export default function CommunityPage() {
-  const [posts, setPosts] = useState<Post[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { data, isLoading: loading, mutate } = useApi<Post[]>('/community/posts');
+  const posts = data ?? [];
   const [showForm, setShowForm] = useState(false);
 
   // form
@@ -35,20 +36,6 @@ export default function CommunityPage() {
   const [body, setBody] = useState('');
   const [category, setCategory] = useState('GENERAL');
   const [submitting, setSubmitting] = useState(false);
-
-  async function load() {
-    setLoading(true);
-    try {
-      const data = await api<Post[]>('/community/posts');
-      setPosts(data);
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  useEffect(() => {
-    load();
-  }, []);
 
   async function onCreate(e: React.FormEvent) {
     e.preventDefault();
@@ -61,7 +48,7 @@ export default function CommunityPage() {
       setTitle('');
       setBody('');
       setShowForm(false);
-      await load();
+      await mutate();
     } finally {
       setSubmitting(false);
     }

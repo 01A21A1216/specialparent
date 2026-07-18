@@ -2,8 +2,9 @@
 
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { api } from '../../../../lib/api';
+import { useApi } from '../../../../lib/swr';
 import { formatDateTime, initials } from '../../../../lib/utils';
 
 interface PostDetail {
@@ -23,24 +24,13 @@ interface PostDetail {
 
 export default function PostDetailPage() {
   const { id } = useParams<{ id: string }>();
-  const [post, setPost] = useState<PostDetail | null>(null);
-  const [loading, setLoading] = useState(true);
+  const {
+    data: post,
+    isLoading: loading,
+    mutate,
+  } = useApi<PostDetail>(id ? `/community/posts/${id}` : null);
   const [comment, setComment] = useState('');
   const [posting, setPosting] = useState(false);
-
-  async function load() {
-    setLoading(true);
-    try {
-      const data = await api<PostDetail>(`/community/posts/${id}`);
-      setPost(data);
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  useEffect(() => {
-    if (id) load();
-  }, [id]);
 
   async function addComment(e: React.FormEvent) {
     e.preventDefault();
@@ -52,7 +42,7 @@ export default function PostDetailPage() {
         body: { body: comment },
       });
       setComment('');
-      await load();
+      await mutate();
     } finally {
       setPosting(false);
     }

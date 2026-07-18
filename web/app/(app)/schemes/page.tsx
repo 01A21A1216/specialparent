@@ -1,7 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import { api } from '../../../lib/api';
+import { useApi } from '../../../lib/swr';
 
 interface Scheme {
   id: string;
@@ -15,14 +14,8 @@ interface Scheme {
 }
 
 export default function SchemesPage() {
-  const [schemes, setSchemes] = useState<Scheme[]>([]);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    api<Scheme[]>('/public/schemes')
-      .then(setSchemes)
-      .finally(() => setLoading(false));
-  }, []);
+  const { data, isLoading: loading } = useApi<Scheme[]>('/public/schemes');
+  const schemes = data ?? [];
 
   return (
     <div className="space-y-8">

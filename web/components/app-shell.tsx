@@ -6,6 +6,26 @@ import type React from 'react';
 import { useEffect, useState } from 'react';
 import { useAuth } from './auth-provider';
 import { cn, initials } from '../lib/utils';
+import {
+  BellIcon,
+  BookIcon,
+  CalendarIcon,
+  ChatIcon,
+  ChevronDoubleLeftIcon,
+  CloseIcon,
+  EmergencyIcon,
+  FlagIcon,
+  HeartIcon,
+  HomeIcon,
+  Logo,
+  MenuIcon,
+  ShieldIcon,
+  SignoutIcon,
+  SparkleIcon,
+  SpeechIcon,
+  UsersIcon,
+  WandIcon,
+} from './nav-icons';
 
 type NavItem = {
   href: string;
@@ -75,6 +95,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const pathname = usePathname();
   const [navOpen, setNavOpen] = useState(false);
+  // Desktop-only: sidebar can collapse to an icon-only rail. Persisted so it
+  // survives navigation and reloads.
+  const [desktopCollapsed, setDesktopCollapsed] = useState(false);
 
   useEffect(() => {
     if (!loading && !user) {
@@ -85,6 +108,28 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     setNavOpen(false);
   }, [pathname]);
+
+  useEffect(() => {
+    try {
+      if (localStorage.getItem('sp_sidebar_collapsed') === '1') {
+        setDesktopCollapsed(true);
+      }
+    } catch {
+      /* ignore */
+    }
+  }, []);
+
+  function toggleDesktopCollapsed() {
+    setDesktopCollapsed((c) => {
+      const next = !c;
+      try {
+        localStorage.setItem('sp_sidebar_collapsed', next ? '1' : '0');
+      } catch {
+        /* ignore */
+      }
+      return next;
+    });
+  }
 
   if (loading || !user) {
     return (
@@ -102,37 +147,95 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           <Logo className="w-8 h-8" />
           <span className="font-display text-lg text-sage-900">SpecialParent</span>
         </Link>
-        <button
-          onClick={() => setNavOpen((o) => !o)}
-          aria-label="Open navigation"
-          className="rounded-full p-2 hover:bg-sage-100"
-        >
-          <MenuIcon className="w-6 h-6" />
-        </button>
+        <div className="flex items-center gap-1">
+          <button
+            type="button"
+            onClick={async () => {
+              await logout();
+              router.replace('/');
+            }}
+            aria-label="Sign out"
+            title="Sign out"
+            className="rounded-full p-2 text-sage-600 hover:bg-coral-50 hover:text-coral-700"
+          >
+            <SignoutIcon className="w-6 h-6" />
+          </button>
+          <button
+            onClick={() => setNavOpen((o) => !o)}
+            aria-label="Open navigation"
+            className="rounded-full p-2 hover:bg-sage-100"
+          >
+            <MenuIcon className="w-6 h-6" />
+          </button>
+        </div>
       </header>
 
       <div className="lg:flex">
         {/* Sidebar */}
         <aside
           className={cn(
-            'lg:sticky lg:top-0 lg:h-screen lg:w-72 lg:flex-shrink-0 lg:flex lg:flex-col',
+            'lg:sticky lg:top-0 lg:h-screen lg:flex-shrink-0 lg:flex lg:flex-col lg:transition-[width] lg:duration-200',
+            desktopCollapsed ? 'lg:w-20' : 'lg:w-72',
             'fixed inset-0 z-40 bg-cream-50 lg:bg-cream-50',
             navOpen ? 'flex flex-col' : 'hidden lg:flex',
           )}
         >
-          <div className="hidden lg:flex items-center gap-3 px-7 pt-8 pb-6">
-            <Logo className="w-10 h-10" />
-            <div className="flex flex-col">
-              <span className="font-display text-2xl text-sage-900 leading-none">
+          {/* Mobile header inside sidebar (has close button) */}
+          <div className="lg:hidden flex items-center justify-between px-5 pt-5 pb-3 border-b border-sage-100">
+            <div className="flex items-center gap-2">
+              <Logo className="w-8 h-8" />
+              <span className="font-display text-xl text-sage-900">
                 SpecialParent
               </span>
-              <span className="text-xs tracking-widest text-coral-500 mt-1">
-                .IN
-              </span>
             </div>
+            <button
+              onClick={() => setNavOpen(false)}
+              aria-label="Close navigation"
+              className="rounded-full p-2 hover:bg-sage-100"
+            >
+              <CloseIcon className="w-6 h-6" />
+            </button>
           </div>
 
-          <nav className="flex-1 px-4 lg:px-5 pb-6 space-y-1.5 mt-4 lg:mt-0">
+          {/* Desktop header */}
+          <div
+            className={cn(
+              'hidden lg:flex items-center gap-3 pt-8 pb-3',
+              desktopCollapsed ? 'px-4 justify-center' : 'px-7',
+            )}
+          >
+            <Logo className="w-10 h-10 flex-shrink-0" />
+            {!desktopCollapsed && (
+              <div className="flex flex-col min-w-0">
+                <span className="font-display text-2xl text-sage-900 leading-none">
+                  SpecialParent
+                </span>
+                <span className="text-xs tracking-widest text-coral-500 mt-1">
+                  .IN
+                </span>
+              </div>
+            )}
+          </div>
+
+          {/* Desktop collapse toggle */}
+          <div className="hidden lg:flex px-3 pb-2">
+            <button
+              type="button"
+              onClick={toggleDesktopCollapsed}
+              aria-label={desktopCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+              title={desktopCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+              className="w-full py-2 rounded-2xl grid place-items-center text-sage-500 hover:bg-sage-100 hover:text-sage-800 transition-colors"
+            >
+              <ChevronDoubleLeftIcon
+                className={cn(
+                  'w-4 h-4 transition-transform',
+                  desktopCollapsed && 'rotate-180',
+                )}
+              />
+            </button>
+          </div>
+
+          <nav className="flex-1 px-3 pb-6 space-y-1.5 mt-4 lg:mt-0 overflow-y-auto">
             {navFor(user.role).map((item) => {
               const active =
                 pathname === item.href || pathname?.startsWith(item.href + '/');
@@ -141,26 +244,38 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                 <Link
                   key={item.href}
                   href={item.href}
+                  title={desktopCollapsed ? item.label : undefined}
                   className={cn(
-                    'flex items-center gap-3 px-4 py-3 rounded-2xl font-medium transition-colors',
+                    'flex items-center gap-3 rounded-2xl font-medium transition-colors px-4 py-3',
+                    desktopCollapsed && 'lg:justify-center lg:px-0',
                     active
                       ? 'bg-sage-600 text-cream-50 shadow-soft'
                       : 'text-sage-700 hover:bg-sage-100',
                   )}
                 >
                   <Icon className="w-5 h-5 flex-shrink-0" />
-                  {item.label}
+                  <span className={cn(desktopCollapsed && 'lg:hidden')}>
+                    {item.label}
+                  </span>
                 </Link>
               );
             })}
           </nav>
 
           <div className="border-t border-sage-100 p-3">
-            <div className="flex items-center gap-2">
+            <div
+              className={cn(
+                'flex items-center gap-2',
+                desktopCollapsed && 'lg:flex-col',
+              )}
+            >
               <Link
                 href="/profile"
+                title={desktopCollapsed ? user.fullName : undefined}
                 className={cn(
                   'flex-1 min-w-0 flex items-center gap-3 px-3 py-2.5 rounded-2xl transition-colors',
+                  desktopCollapsed &&
+                    'lg:flex-none lg:justify-center lg:w-full lg:px-2',
                   pathname === '/profile' || pathname?.startsWith('/profile/')
                     ? 'bg-sage-600 text-cream-50 shadow-soft'
                     : 'text-sage-800 hover:bg-sage-100',
@@ -178,7 +293,12 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                     {initials(user.fullName)}
                   </div>
                 )}
-                <div className="min-w-0 flex-1">
+                <div
+                  className={cn(
+                    'min-w-0 flex-1',
+                    desktopCollapsed && 'lg:hidden',
+                  )}
+                >
                   <div className="text-sm font-medium truncate">
                     {user.fullName}
                   </div>
@@ -218,137 +338,3 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   );
 }
 
-// ── Icons (inline SVG so no dep) ─────────────────────────
-function Logo({ className }: { className?: string }) {
-  return (
-    <svg viewBox="0 0 40 40" className={className} aria-hidden="true">
-      <circle cx="20" cy="20" r="18" fill="#e1ebe2" />
-      {/* Green heart (left) */}
-      <path
-        d="M14 14 C 11 11, 7.5 12.5, 8.5 16.5 C 9.3 20, 14 24, 14 24 C 14 24, 18.7 20, 19.5 16.5 C 20.5 12.5, 17 11, 14 14 Z"
-        fill="#4ea05c"
-        stroke="#2e6e3a"
-        strokeWidth="0.6"
-      />
-      {/* Red heart (right) */}
-      <path
-        d="M26 14 C 23 11, 19.5 12.5, 20.5 16.5 C 21.3 20, 26 24, 26 24 C 26 24, 30.7 20, 31.5 16.5 C 32.5 12.5, 29 11, 26 14 Z"
-        fill="#e63946"
-        stroke="#a82836"
-        strokeWidth="0.6"
-      />
-    </svg>
-  );
-}
-
-function HomeIcon({ className }: { className?: string }) {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" className={className} aria-hidden="true">
-      <path d="M3 11l9-8 9 8M5 10v10h14V10" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-    </svg>
-  );
-}
-function HeartIcon({ className }: { className?: string }) {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" className={className} aria-hidden="true">
-      <path d="M12 21s-7-4.5-7-10a4.5 4.5 0 0 1 8-3 4.5 4.5 0 0 1 8 3c0 5.5-7 10-7 10h-2z" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" />
-    </svg>
-  );
-}
-function SparkleIcon({ className }: { className?: string }) {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" className={className} aria-hidden="true">
-      <path d="M12 3v6M12 15v6M3 12h6M15 12h6M6 6l3 3M15 15l3 3M6 18l3-3M15 9l3-3" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-    </svg>
-  );
-}
-function ChatIcon({ className }: { className?: string }) {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" className={className} aria-hidden="true">
-      <path d="M21 12a8 8 0 0 1-11.6 7.1L4 21l1.9-5.4A8 8 0 1 1 21 12z" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" />
-    </svg>
-  );
-}
-function BookIcon({ className }: { className?: string }) {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" className={className} aria-hidden="true">
-      <path d="M4 4h10a4 4 0 0 1 4 4v12H8a4 4 0 0 1-4-4V4zM18 8H8" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" />
-    </svg>
-  );
-}
-function ShieldIcon({ className }: { className?: string }) {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" className={className} aria-hidden="true">
-      <path d="M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6l8-3z" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" />
-    </svg>
-  );
-}
-function WandIcon({ className }: { className?: string }) {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" className={className} aria-hidden="true">
-      <path d="M5 19l10-10M14 6l4 4M16 4l1 1M19 7l1 1M9 14l1 1M4 12l1 1" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-    </svg>
-  );
-}
-function MenuIcon({ className }: { className?: string }) {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" className={className} aria-hidden="true">
-      <path d="M4 6h16M4 12h16M4 18h16" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-    </svg>
-  );
-}
-function SpeechIcon({ className }: { className?: string }) {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" className={className} aria-hidden="true">
-      <rect x="3" y="5" width="14" height="11" rx="2" stroke="currentColor" strokeWidth="2" />
-      <path d="M7 19l4-3M9 9h2M9 12h4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-    </svg>
-  );
-}
-function UsersIcon({ className }: { className?: string }) {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" className={className} aria-hidden="true">
-      <circle cx="9" cy="8" r="3.5" stroke="currentColor" strokeWidth="2" />
-      <path d="M3 20c1-4 4-6 6-6s5 2 6 6M16 11a3 3 0 1 0 0-6M21 20c-.5-3-2-4.5-4-5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-    </svg>
-  );
-}
-function FlagIcon({ className }: { className?: string }) {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" className={className} aria-hidden="true">
-      <path d="M5 21V4M5 4h11l-2 4 2 4H5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-    </svg>
-  );
-}
-function CalendarIcon({ className }: { className?: string }) {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" className={className} aria-hidden="true">
-      <rect x="3" y="5" width="18" height="16" rx="2" stroke="currentColor" strokeWidth="2" />
-      <path d="M3 10h18M8 3v4M16 3v4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-    </svg>
-  );
-}
-function BellIcon({ className }: { className?: string }) {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" className={className} aria-hidden="true">
-      <path d="M6 8a6 6 0 1 1 12 0v5l2 3H4l2-3V8z" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" />
-      <path d="M10 20a2 2 0 0 0 4 0" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-    </svg>
-  );
-}
-function EmergencyIcon({ className }: { className?: string }) {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" className={className} aria-hidden="true">
-      <path d="M12 2 L4 6v6c0 5 4 8 8 10 4-2 8-5 8-10V6l-8-4z" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" />
-      <path d="M12 8v4M12 15v.5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-    </svg>
-  );
-}
-function SignoutIcon({ className }: { className?: string }) {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" className={className} aria-hidden="true">
-      <path d="M10 4H6a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-      <path d="M16 8l4 4-4 4M20 12H10" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-    </svg>
-  );
-}

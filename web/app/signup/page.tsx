@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { useState } from 'react';
+import { Suspense, useState } from 'react';
 import { AuthLayout } from '../../components/auth-layout';
 import { useAuth } from '../../components/auth-provider';
 
@@ -17,7 +17,7 @@ const ROLE_OPTIONS: Array<{ value: SignupRole; label: string }> = [
   { value: 'SCHOOL_ADMIN', label: 'School admin' },
 ];
 
-export default function SignupPage() {
+function SignupForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { signup } = useAuth();
@@ -145,5 +145,13 @@ export default function SignupPage() {
         </p>
       </form>
     </AuthLayout>
+  );
+}
+
+export default function SignupPage() {
+  return (
+    <Suspense fallback={<div />}>
+      <SignupForm />
+    </Suspense>
   );
 }

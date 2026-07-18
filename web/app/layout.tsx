@@ -1,7 +1,8 @@
-import type { Metadata } from 'next';
+import type { Metadata, Viewport } from 'next';
 import { Plus_Jakarta_Sans, Fraunces } from 'next/font/google';
 import './globals.css';
 import { AuthProvider } from '../components/auth-provider';
+import { SWRProvider } from '../components/swr-provider';
 
 const sans = Plus_Jakarta_Sans({
   subsets: ['latin'],
@@ -20,6 +21,10 @@ export const metadata: Metadata = {
   title: 'SpecialParent.in — India\'s Inclusive Special Needs Care Ecosystem',
   description:
     'A warm, accessible platform for Indian families, schools, therapists and NGOs supporting children with special needs.',
+};
+
+// Next 15 moved themeColor from metadata to viewport.
+export const viewport: Viewport = {
   themeColor: '#fdfaf5',
 };
 
@@ -50,7 +55,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <script dangerouslySetInnerHTML={{ __html: SUPPRESS_EXTENSION_ERRORS }} />
       </head>
       <body suppressHydrationWarning>
-        <AuthProvider>{children}</AuthProvider>
+        <SWRProvider>
+          <AuthProvider>{children}</AuthProvider>
+        </SWRProvider>
       </body>
     </html>
   );

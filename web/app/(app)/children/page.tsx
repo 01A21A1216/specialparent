@@ -1,8 +1,9 @@
 'use client';
 
 import Link from 'next/link';
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { api } from '../../../lib/api';
+import { useApi } from '../../../lib/swr';
 import { ageInYears, initials } from '../../../lib/utils';
 
 interface ChildItem {
@@ -15,8 +16,8 @@ interface ChildItem {
 }
 
 export default function ChildrenPage() {
-  const [children, setChildren] = useState<ChildItem[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { data, isLoading: loading, mutate } = useApi<ChildItem[]>('/children');
+  const children = data ?? [];
   const [showForm, setShowForm] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -32,20 +33,6 @@ export default function ChildrenPage() {
       .split(',')
       .map((x) => x.trim())
       .filter(Boolean);
-
-  async function load() {
-    setLoading(true);
-    try {
-      const data = await api<ChildItem[]>('/children');
-      setChildren(data);
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  useEffect(() => {
-    load();
-  }, []);
 
   async function onCreate(e: React.FormEvent) {
     e.preventDefault();
@@ -66,7 +53,7 @@ export default function ChildrenPage() {
       setDiagnoses('');
       setHobbies('');
       setShowForm(false);
-      await load();
+      await mutate();
     } catch (err: any) {
       setError(err?.message ?? 'Could not create');
     } finally {

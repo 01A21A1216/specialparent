@@ -22,6 +22,7 @@ import { InvitesModule } from './invites/invites.module';
 import { CaregiversModule } from './caregivers/caregivers.module';
 import { HealthController } from './common/health.controller';
 import { AuditInterceptor } from './common/audit.interceptor';
+import { CacheModule } from './common/cache/cache.module';
 
 @Module({
   imports: [
@@ -31,6 +32,7 @@ import { AuditInterceptor } from './common/audit.interceptor';
       { name: 'ai', ttl: 60_000, limit: 30 },
     ]),
     PrismaModule,
+    CacheModule,
     AuthModule,
     UsersModule,
     ChildrenModule,

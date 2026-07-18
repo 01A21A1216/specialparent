@@ -1,7 +1,8 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { api } from '../../../lib/api';
+import { useApi } from '../../../lib/swr';
 import { formatDateTime } from '../../../lib/utils';
 
 type AppointmentKind = 'THERAPY' | 'DOCTOR' | 'SCHOOL_MEETING' | 'ASSESSMENT' | 'OTHER';
@@ -65,32 +66,19 @@ const emptyForm = (): FormState => ({
 });
 
 export default function AppointmentsPage() {
-  const [items, setItems] = useState<Appointment[] | null>(null);
-  const [children, setChildren] = useState<ChildBrief[]>([]);
-  const [loading, setLoading] = useState(true);
+  const {
+    data: items,
+    isLoading: loadingAppts,
+    mutate: mutateAppts,
+  } = useApi<Appointment[]>('/appointments');
+  const { data: children = [], isLoading: loadingKids } =
+    useApi<ChildBrief[]>('/children');
+  const loading = loadingAppts || loadingKids;
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState<FormState>(emptyForm());
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
-
-  async function load() {
-    setLoading(true);
-    try {
-      const [appts, kids] = await Promise.all([
-        api<Appointment[]>('/appointments'),
-        api<ChildBrief[]>('/children'),
-      ]);
-      setItems(appts);
-      setChildren(kids);
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  useEffect(() => {
-    load();
-  }, []);
 
   function startCreate() {
     setEditingId(null);
@@ -147,7 +135,7 @@ export default function AppointmentsPage() {
         await api('/appointments', { method: 'POST', body });
       }
       closeForm();
-      await load();
+      await mutateAppts();
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Could not save';
       setError(msg);
@@ -160,7 +148,7 @@ export default function AppointmentsPage() {
     if (!confirm(`Delete "${a.title}"?`)) return;
     try {
       await api(`/appointments/${a.id}`, { method: 'DELETE' });
-      await load();
+      await mutateAppts();
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Could not delete';
       alert(msg);

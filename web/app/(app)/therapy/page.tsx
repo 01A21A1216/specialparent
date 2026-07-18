@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { api } from '../../../lib/api';
+import { useApi } from '../../../lib/swr';
 import { formatDateTime } from '../../../lib/utils';
 
 interface UpcomingSession {
@@ -30,9 +31,14 @@ const TYPE_OPTIONS = [
 ];
 
 export default function TherapyPage() {
-  const [upcoming, setUpcoming] = useState<UpcomingSession[]>([]);
-  const [children, setChildren] = useState<ChildBrief[]>([]);
-  const [loading, setLoading] = useState(true);
+  const {
+    data: upcoming = [],
+    isLoading: loadingSessions,
+    mutate: mutateUpcoming,
+  } = useApi<UpcomingSession[]>('/therapy/upcoming');
+  const { data: children = [], isLoading: loadingKids } =
+    useApi<ChildBrief[]>('/children');
+  const loading = loadingSessions || loadingKids;
   const [showForm, setShowForm] = useState(false);
 
   // form
@@ -43,24 +49,10 @@ export default function TherapyPage() {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  async function load() {
-    setLoading(true);
-    try {
-      const [u, kids] = await Promise.all([
-        api<UpcomingSession[]>('/therapy/upcoming'),
-        api<ChildBrief[]>('/children'),
-      ]);
-      setUpcoming(u);
-      setChildren(kids);
-      if (kids.length && !childId) setChildId(kids[0].id);
-    } finally {
-      setLoading(false);
-    }
-  }
-
+  // Default the form's child to the first one available once children load.
   useEffect(() => {
-    load();
-  }, []);
+    if (children.length && !childId) setChildId(children[0].id);
+  }, [children, childId]);
 
   async function onCreate(e: React.FormEvent) {
     e.preventDefault();
@@ -78,7 +70,7 @@ export default function TherapyPage() {
       });
       setWhen('');
       setShowForm(false);
-      await load();
+      await mutateUpcoming();
     } catch (err: any) {
       setError(err?.message ?? 'Could not schedule');
     } finally {

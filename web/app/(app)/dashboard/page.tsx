@@ -1,9 +1,8 @@
 'use client';
 
 import Link from 'next/link';
-import { useEffect, useState } from 'react';
 import { useAuth } from '../../../components/auth-provider';
-import { api } from '../../../lib/api';
+import { useApi } from '../../../lib/swr';
 import { ageInYears, formatDateTime, initials } from '../../../lib/utils';
 
 interface DashboardData {
@@ -50,14 +49,7 @@ const moodEmoji: Record<string, string> = {
 
 export default function DashboardPage() {
   const { user } = useAuth();
-  const [data, setData] = useState<DashboardData | null>(null);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    api<DashboardData>('/users/dashboard')
-      .then(setData)
-      .finally(() => setLoading(false));
-  }, []);
+  const { data, isLoading: loading } = useApi<DashboardData>('/users/dashboard');
 
   if (!user) return null;
 

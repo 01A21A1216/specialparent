@@ -1,8 +1,9 @@
 'use client';
 
 import Link from 'next/link';
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { api } from '../../../../lib/api';
+import { useApi } from '../../../../lib/swr';
 import { formatDateTime } from '../../../../lib/utils';
 
 interface ModPost {
@@ -17,35 +18,27 @@ interface ModPost {
 }
 
 export default function AdminModeration() {
-  const [posts, setPosts] = useState<ModPost[]>([]);
-  const [loading, setLoading] = useState(true);
+  const {
+    data: posts = [],
+    isLoading: loading,
+    error,
+    mutate,
+  } = useApi<ModPost[]>('/admin/community/posts?limit=200');
   const [busyId, setBusyId] = useState<string | null>(null);
-  const [err, setErr] = useState<string | null>(null);
-
-  async function load() {
-    setLoading(true);
-    try {
-      const list = await api<ModPost[]>('/admin/community/posts?limit=200');
-      setPosts(list);
-    } catch (e: any) {
-      setErr(e?.message || 'Could not load posts.');
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  useEffect(() => {
-    load();
-  }, []);
+  const [err, setErr] = useState<string | null>(error?.message ?? null);
 
   async function deletePost(id: string) {
     if (!confirm('Delete this post and all its comments? This cannot be undone.')) return;
     setBusyId(id);
+    setErr(null);
+    // Optimistic remove from the local cache, revalidate on error.
+    const optimistic = posts.filter((p) => p.id !== id);
+    mutate(optimistic, false);
     try {
       await api(`/admin/community/posts/${id}`, { method: 'DELETE' });
-      setPosts((prev) => prev.filter((p) => p.id !== id));
     } catch (e: any) {
       setErr(e?.message || 'Delete failed.');
+      mutate(); // rollback via refetch
     } finally {
       setBusyId(null);
     }

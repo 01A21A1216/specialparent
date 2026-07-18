@@ -1,8 +1,9 @@
 'use client';
 
 import Link from 'next/link';
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { api } from '../../../lib/api';
+import { useApi } from '../../../lib/swr';
 import { formatDateTime } from '../../../lib/utils';
 
 type NotificationKind = 'REMINDER' | 'SYSTEM' | 'COMMUNITY' | 'THERAPY' | 'AI';
@@ -26,35 +27,25 @@ const KIND_STYLE: Record<NotificationKind, { emoji: string; label: string; chip:
 };
 
 export default function NotificationsPage() {
-  const [items, setItems] = useState<Notification[] | null>(null);
-  const [loading, setLoading] = useState(true);
+  const {
+    data: items,
+    isLoading: loading,
+    mutate,
+  } = useApi<Notification[]>('/notifications');
   const [busy, setBusy] = useState<string | 'all' | null>(null);
-
-  async function load() {
-    setLoading(true);
-    try {
-      const list = await api<Notification[]>('/notifications');
-      setItems(list);
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  useEffect(() => {
-    load();
-  }, []);
 
   async function markRead(n: Notification) {
     if (n.readAt) return;
     setBusy(n.id);
-    // optimistic update
-    setItems((prev) =>
-      prev ? prev.map((x) => (x.id === n.id ? { ...x, readAt: new Date().toISOString() } : x)) : prev,
+    // Optimistic: mutate cache directly, no revalidate.
+    const optimistic = (items ?? []).map((x) =>
+      x.id === n.id ? { ...x, readAt: new Date().toISOString() } : x,
     );
+    mutate(optimistic, false);
     try {
       await api(`/notifications/${n.id}/read`, { method: 'PATCH' });
     } catch {
-      await load(); // rollback via refetch
+      mutate(); // rollback via refetch
     } finally {
       setBusy(null);
     }
@@ -64,15 +55,16 @@ export default function NotificationsPage() {
     const unread = (items ?? []).filter((n) => !n.readAt);
     if (unread.length === 0) return;
     setBusy('all');
-    setItems((prev) =>
-      prev ? prev.map((x) => (x.readAt ? x : { ...x, readAt: new Date().toISOString() })) : prev,
+    const optimistic = (items ?? []).map((x) =>
+      x.readAt ? x : { ...x, readAt: new Date().toISOString() },
     );
+    mutate(optimistic, false);
     try {
       await Promise.all(
         unread.map((n) => api(`/notifications/${n.id}/read`, { method: 'PATCH' })),
       );
     } catch {
-      await load();
+      mutate();
     } finally {
       setBusy(null);
     }

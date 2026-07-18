@@ -1,8 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { useEffect, useState } from 'react';
-import { api } from '../../../lib/api';
+import { useApi } from '../../../lib/swr';
 import { formatDateTime } from '../../../lib/utils';
 
 interface Overview {
@@ -44,19 +43,10 @@ const MOOD_COLOR: Record<string, string> = {
 };
 
 export default function AdminOverview() {
-  const [data, setData] = useState<Overview | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [err, setErr] = useState<string | null>(null);
-
-  useEffect(() => {
-    api<Overview>('/admin/overview')
-      .then(setData)
-      .catch((e) => setErr(e?.message || 'Failed to load'))
-      .finally(() => setLoading(false));
-  }, []);
+  const { data, error, isLoading: loading } = useApi<Overview>('/admin/overview');
 
   if (loading) return <div className="card animate-pulse h-64" />;
-  if (err) return <div className="card text-coral-700">{err}</div>;
+  if (error) return <div className="card text-coral-700">{error.message || 'Failed to load'}</div>;
   if (!data) return null;
 
   return (

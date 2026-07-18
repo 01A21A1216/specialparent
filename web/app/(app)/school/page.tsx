@@ -1,9 +1,8 @@
 'use client';
 
 import Link from 'next/link';
-import { useEffect, useState } from 'react';
 import { useAuth } from '../../../components/auth-provider';
-import { api } from '../../../lib/api';
+import { useApi } from '../../../lib/swr';
 import { ageInYears, initials } from '../../../lib/utils';
 
 interface Student {
@@ -18,14 +17,10 @@ interface Student {
 
 export default function SchoolPortal() {
   const { user } = useAuth();
-  const [students, setStudents] = useState<Student[] | null>(null);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    api<{ children: Student[] }>('/users/dashboard')
-      .then((d) => setStudents(d.children))
-      .finally(() => setLoading(false));
-  }, []);
+  const { data, isLoading: loading } = useApi<{ children: Student[] }>(
+    '/users/dashboard',
+  );
+  const students = data?.children ?? null;
 
   return (
     <div className="space-y-10">

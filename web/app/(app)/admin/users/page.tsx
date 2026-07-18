@@ -1,9 +1,10 @@
 'use client';
 
 import Link from 'next/link';
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { useAuth } from '../../../../components/auth-provider';
 import { api } from '../../../../lib/api';
+import { useApi } from '../../../../lib/swr';
 import { formatDateTime } from '../../../../lib/utils';
 
 interface User {
@@ -29,45 +30,36 @@ const ROLE_TONE: Record<string, string> = {
 
 export default function AdminUsers() {
   const { user: me } = useAuth();
-  const [users, setUsers] = useState<User[]>([]);
-  const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<'' | User['role']>('');
   const [q, setQ] = useState('');
+  // Committed search — only refetches when the user clicks Search / presses Enter,
+  // not on every keystroke. Keeps the original UX.
+  const [searchQ, setSearchQ] = useState('');
   const [busyId, setBusyId] = useState<string | null>(null);
-  const [err, setErr] = useState<string | null>(null);
 
-  async function load() {
-    setLoading(true);
-    setErr(null);
-    try {
-      const params = new URLSearchParams();
-      if (filter) params.set('role', filter);
-      if (q.trim()) params.set('q', q.trim());
-      const list = await api<User[]>(`/admin/users?${params.toString()}`);
-      setUsers(list);
-    } catch (e: any) {
-      setErr(e?.message || 'Could not load users.');
-    } finally {
-      setLoading(false);
-    }
+  const params = new URLSearchParams();
+  if (filter) params.set('role', filter);
+  if (searchQ.trim()) params.set('q', searchQ.trim());
+  const key = `/admin/users?${params.toString()}`;
+  const {
+    data: users = [],
+    isLoading: loading,
+    error,
+    mutate,
+  } = useApi<User[]>(key);
+  const err = error?.message ?? null;
+
+  function search() {
+    setSearchQ(q);
   }
-
-  useEffect(() => {
-    load();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [filter]);
 
   async function patchUser(id: string, patch: { role?: User['role']; isActive?: boolean }) {
     setBusyId(id);
-    setErr(null);
     try {
-      const updated = await api<User>(`/admin/users/${id}`, {
-        method: 'PATCH',
-        body: patch,
-      });
-      setUsers((prev) => prev.map((u) => (u.id === id ? updated : u)));
+      await api<User>(`/admin/users/${id}`, { method: 'PATCH', body: patch });
+      await mutate();
     } catch (e: any) {
-      setErr(e?.message || 'Update failed.');
+      alert(e?.message || 'Update failed.');
     } finally {
       setBusyId(null);
     }
@@ -86,7 +78,7 @@ export default function AdminUsers() {
         <input
           value={q}
           onChange={(e) => setQ(e.target.value)}
-          onKeyDown={(e) => e.key === 'Enter' && load()}
+          onKeyDown={(e) => e.key === 'Enter' && search()}
           placeholder="Search by name or email…"
           className="input flex-1"
         />
@@ -102,7 +94,7 @@ export default function AdminUsers() {
             </option>
           ))}
         </select>
-        <button onClick={load} className="btn-primary">Search</button>
+        <button onClick={search} className="btn-primary">Search</button>
       </div>
 
       {err && (

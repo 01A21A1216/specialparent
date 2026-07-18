@@ -30,6 +30,7 @@ import { Language, Role } from '@prisma/client';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { CurrentUser, AuthUser } from '../common/current-user.decorator';
 import { PrismaService } from '../prisma/prisma.service';
+import { RedisCacheService } from '../common/cache/cache.module';
 
 // ─── Admin guard ───────────────────────────────────────────
 @Injectable()
@@ -89,7 +90,19 @@ export class UpsertSchemeDto {
 // ─── Service ────────────────────────────────────────────────
 @Injectable()
 export class AdminService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly cache: RedisCacheService,
+  ) {}
+
+  private async invalidateResources(slug?: string) {
+    await this.cache.delPattern('resources:list:*');
+    if (slug) await this.cache.del(`resources:detail:${slug}`);
+  }
+
+  private async invalidateSchemes() {
+    await this.cache.delPattern('schemes:list:*');
+  }
 
   async overview() {
     const [
@@ -258,17 +271,20 @@ export class AdminService {
           : dto.publish === false ? null
           : undefined,
     };
-    return this.prisma.resource.upsert({
+    const r = await this.prisma.resource.upsert({
       where: { slug: dto.slug },
       update: data,
       create: { slug: dto.slug, ...data },
     });
+    await this.invalidateResources(r.slug);
+    return r;
   }
 
   async deleteResource(id: string) {
     const r = await this.prisma.resource.findUnique({ where: { id } });
     if (!r) return { ok: true };
     await this.prisma.resource.delete({ where: { id } });
+    await this.invalidateResources(r.slug);
     return { ok: true };
   }
 
@@ -287,17 +303,20 @@ export class AdminService {
       states: dto.states ?? [],
       language: dto.language ?? 'EN',
     };
-    return this.prisma.governmentScheme.upsert({
+    const s = await this.prisma.governmentScheme.upsert({
       where: { slug: dto.slug },
       update: data,
       create: { slug: dto.slug, ...data },
     });
+    await this.invalidateSchemes();
+    return s;
   }
 
   async deleteScheme(id: string) {
     const s = await this.prisma.governmentScheme.findUnique({ where: { id } });
     if (!s) return { ok: true };
     await this.prisma.governmentScheme.delete({ where: { id } });
+    await this.invalidateSchemes();
     return { ok: true };
   }
 

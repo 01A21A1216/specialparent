@@ -1,7 +1,8 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { api } from '../../../lib/api';
+import { useApi } from '../../../lib/swr';
 import { useAuth } from '../../../components/auth-provider';
 import { formatDate, formatDateTime, initials } from '../../../lib/utils';
 
@@ -49,34 +50,19 @@ const ROLE_LABEL: Record<Role, string> = {
 };
 
 export default function ProfilePage() {
-  const { user: sessionUser, refresh: refreshSession } = useAuth();
-  const [me, setMe] = useState<Me | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [loadErr, setLoadErr] = useState<string | null>(null);
-
-  async function load() {
-    setLoading(true);
-    setLoadErr(null);
-    try {
-      const data = await api<Me>('/auth/me');
-      setMe(data);
-    } catch (err) {
-      const msg = err instanceof Error ? err.message : 'Could not load profile';
-      setLoadErr(msg);
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  useEffect(() => {
-    load();
-  }, []);
+  const { refresh: refreshSession } = useAuth();
+  const {
+    data: me,
+    isLoading: loading,
+    error,
+    mutate,
+  } = useApi<Me>('/auth/me');
 
   if (loading) return <div className="text-sage-500">Loading…</div>;
-  if (loadErr || !me)
+  if (error || !me)
     return (
       <div className="card text-coral-800 bg-coral-50 border border-coral-200">
-        {loadErr || 'Profile not found.'}
+        {error?.message || 'Profile not found.'}
       </div>
     );
 
@@ -127,7 +113,7 @@ export default function ProfilePage() {
       <EditProfileCard
         me={me}
         onSaved={async () => {
-          await load();
+          await mutate();
           await refreshSession?.();
         }}
       />

@@ -1,7 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import { api } from '../../../lib/api';
+import { useApi } from '../../../lib/swr';
 
 interface ChildContact {
   id: string;
@@ -92,14 +91,8 @@ const TONE_BTN: Record<Helpline['tone'], string> = {
 };
 
 export default function EmergencyPage() {
-  const [children, setChildren] = useState<ChildContact[] | null>(null);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    api<ChildContact[]>('/children')
-      .then(setChildren)
-      .finally(() => setLoading(false));
-  }, []);
+  const { data: children = null, isLoading: loading } =
+    useApi<ChildContact[]>('/children');
 
   return (
     <div className="space-y-10">
