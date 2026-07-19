@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { api } from '../../../../../lib/api';
 import { useApi } from '../../../../../lib/swr';
+import { MusicPicker } from '../../../../../components/music-picker';
 
 type Category =
   | 'SELF_CARE'
@@ -62,6 +63,23 @@ const ICON_LIBRARY = [
 ];
 
 const DAY_LABELS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+const DAY_LABELS_LONG = [
+  'Sunday',
+  'Monday',
+  'Tuesday',
+  'Wednesday',
+  'Thursday',
+  'Friday',
+  'Saturday',
+];
+const WEEKDAYS = [1, 2, 3, 4, 5];
+const WEEKEND = [0, 6];
+
+function isoDate(d: Date): string {
+  return `${d.getDate()} ${d.toLocaleString('en-IN', {
+    month: 'long',
+  })} ${d.getFullYear()}`;
+}
 
 function nowHM(): string {
   const d = new Date();
@@ -75,6 +93,16 @@ function fmtTime(hm: string): string {
   return `${hr12}:${String(m).padStart(2, '0')} ${suffix}`;
 }
 
+// "Which day are we looking at?" — the routine can differ across weekdays,
+// weekends, or a specific day like Wednesday. `today` shows only today's
+// steps + the "now" highlight; the other choices preview any day so a
+// parent can set up Saturday's rhythm on Thursday evening.
+type DayView =
+  | { kind: 'today' }
+  | { kind: 'weekdays' }
+  | { kind: 'weekend' }
+  | { kind: 'day'; day: number };
+
 export function RoutineTab({ childId }: { childId: string }) {
   const { data: steps = [], mutate, isLoading, error } = useApi<RoutineStep[]>(
     `/children/${childId}/routine`,
@@ -82,6 +110,8 @@ export function RoutineTab({ childId }: { childId: string }) {
   const [showAdd, setShowAdd] = useState(false);
   const [editing, setEditing] = useState<RoutineStep | null>(null);
   const [showPresets, setShowPresets] = useState(false);
+  const [showMusic, setShowMusic] = useState(false);
+  const [dayView, setDayView] = useState<DayView>({ kind: 'today' });
 
   // "Now" highlight — which step is the child in *right now*? Compute by
   // finding the last step whose time <= current time. Recompute every 60s
@@ -93,22 +123,41 @@ export function RoutineTab({ childId }: { childId: string }) {
   }, []);
 
   const today = new Date().getDay();
-  const stepsToday = useMemo(
-    () =>
-      steps.filter(
-        (s) => s.active && (s.daysOfWeek.length === 0 || s.daysOfWeek.includes(today)),
-      ),
-    [steps, today],
-  );
+  const todayDate = new Date();
 
+  // A step matches the current view if:
+  //   • view=today       → step runs on today OR every-day (daysOfWeek empty)
+  //   • view=weekdays    → step runs Mon-Fri or every-day
+  //   • view=weekend     → step runs Sat/Sun or every-day
+  //   • view=day (N)     → step runs on N or every-day
+  const stepsInView = useMemo(() => {
+    const targetDays: number[] =
+      dayView.kind === 'today'
+        ? [today]
+        : dayView.kind === 'weekdays'
+          ? WEEKDAYS
+          : dayView.kind === 'weekend'
+            ? WEEKEND
+            : [dayView.day];
+    return steps
+      .filter((s) => s.active)
+      .filter(
+        (s) =>
+          s.daysOfWeek.length === 0 ||
+          targetDays.some((d) => s.daysOfWeek.includes(d)),
+      );
+  }, [steps, dayView, today]);
+
+  // "Now" highlight only makes sense when we're actually looking at today.
   const nowIdx = useMemo(() => {
+    if (dayView.kind !== 'today') return -1;
     let idx = -1;
-    for (let i = 0; i < stepsToday.length; i++) {
-      if (stepsToday[i].timeOfDay <= now) idx = i;
+    for (let i = 0; i < stepsInView.length; i++) {
+      if (stepsInView[i].timeOfDay <= now) idx = i;
       else break;
     }
     return idx;
-  }, [stepsToday, now]);
+  }, [stepsInView, now, dayView]);
 
   function speak(text: string) {
     if (typeof window === 'undefined' || !('speechSynthesis' in window)) return;
@@ -121,12 +170,25 @@ export function RoutineTab({ childId }: { childId: string }) {
   function speakAll() {
     if (typeof window === 'undefined' || !('speechSynthesis' in window)) return;
     window.speechSynthesis.cancel();
-    stepsToday.forEach((s) => {
+    stepsInView.forEach((s) => {
       const u = new SpeechSynthesisUtterance(`At ${fmtTime(s.timeOfDay)}, ${s.title}.`);
       u.rate = 0.9;
       window.speechSynthesis.speak(u);
     });
   }
+
+  const headerLabel = (() => {
+    switch (dayView.kind) {
+      case 'today':
+        return `${DAY_LABELS_LONG[today]} · ${isoDate(todayDate)}`;
+      case 'weekdays':
+        return 'Weekdays (Mon–Fri)';
+      case 'weekend':
+        return 'Weekend (Sat + Sun)';
+      case 'day':
+        return DAY_LABELS_LONG[dayView.day];
+    }
+  })();
 
   return (
     <div className="space-y-6">
@@ -134,18 +196,27 @@ export function RoutineTab({ childId }: { childId: string }) {
         <div>
           <h3 className="font-display text-2xl text-sage-900">Daily routine</h3>
           <p className="text-sm text-sage-500">
-            Visual schedule for the day. Tap a card to hear it read aloud.
+            {headerLabel}
+            {dayView.kind === 'today' && ' — tap a card to hear it read aloud.'}
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
-          {stepsToday.length > 0 && (
+          <button
+            type="button"
+            onClick={() => setShowMusic(true)}
+            className="btn-ghost text-sm"
+            title="Play calming music"
+          >
+            🎵 Calming music
+          </button>
+          {stepsInView.length > 0 && (
             <button
               type="button"
               onClick={speakAll}
               className="btn-ghost text-sm"
               title="Read the whole routine aloud"
             >
-              🔊 Read full routine
+              🔊 Read routine
             </button>
           )}
           <button
@@ -167,6 +238,36 @@ export function RoutineTab({ childId }: { childId: string }) {
           </button>
         </div>
       </div>
+
+      {/* Day view picker — Today / Weekdays / Weekend / any specific day */}
+      <div className="flex flex-wrap gap-1.5">
+        <ViewChip
+          label={`Today (${DAY_LABELS[today]})`}
+          active={dayView.kind === 'today'}
+          onClick={() => setDayView({ kind: 'today' })}
+        />
+        <ViewChip
+          label="Weekdays"
+          active={dayView.kind === 'weekdays'}
+          onClick={() => setDayView({ kind: 'weekdays' })}
+        />
+        <ViewChip
+          label="Weekend"
+          active={dayView.kind === 'weekend'}
+          onClick={() => setDayView({ kind: 'weekend' })}
+        />
+        <span className="w-px bg-sage-200 mx-1" aria-hidden />
+        {DAY_LABELS.map((label, i) => (
+          <ViewChip
+            key={label}
+            label={label}
+            active={dayView.kind === 'day' && dayView.day === i}
+            onClick={() => setDayView({ kind: 'day', day: i })}
+          />
+        ))}
+      </div>
+
+      {showMusic && <MusicPicker onClose={() => setShowMusic(false)} />}
 
       {showPresets && (
         <PresetPicker
@@ -201,10 +302,12 @@ export function RoutineTab({ childId }: { childId: string }) {
         <div className="card border-coral-200 bg-coral-50 text-coral-800">
           Couldn't load routine. {error.message}
         </div>
-      ) : stepsToday.length === 0 ? (
+      ) : stepsInView.length === 0 ? (
         <div className="card text-center py-10 space-y-3">
           <div className="text-5xl">🕒</div>
-          <p className="text-sage-700 font-medium">No routine yet for today.</p>
+          <p className="text-sage-700 font-medium">
+            No routine steps for {headerLabel.toLowerCase()}.
+          </p>
           <p className="text-sage-500 text-sm max-w-md mx-auto">
             Add a step, or load a starter template — School day, Weekend, Therapy day,
             or Toddler basics — and edit from there.
@@ -212,7 +315,7 @@ export function RoutineTab({ childId }: { childId: string }) {
         </div>
       ) : (
         <ul className="space-y-3">
-          {stepsToday.map((s, i) => (
+          {stepsInView.map((s, i) => (
             <StepCard
               key={s.id}
               step={s}
@@ -232,6 +335,31 @@ export function RoutineTab({ childId }: { childId: string }) {
         </ul>
       )}
     </div>
+  );
+}
+
+// ── Day-view chip ──
+function ViewChip({
+  label,
+  active,
+  onClick,
+}: {
+  label: string;
+  active: boolean;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={`chip text-xs transition-colors ${
+        active
+          ? 'bg-sage-600 text-cream-50'
+          : 'bg-cream-100 text-sage-700 hover:bg-sage-100'
+      }`}
+    >
+      {label}
+    </button>
   );
 }
 

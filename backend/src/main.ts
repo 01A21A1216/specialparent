@@ -17,7 +17,40 @@ async function bootstrap() {
   app.useLogger(app.get(PinoLogger));
   const logger = new Logger('Bootstrap');
 
-  app.use(helmet());
+  // Helmet — same defaults everywhere plus a stricter CSP in production.
+  // In dev we keep 'unsafe-inline' + 'unsafe-eval' so Next.js's dev overlay
+  // and hot reload still work; prod locks scripts to same-origin only.
+  const isProd = process.env.NODE_ENV === 'production';
+  app.use(
+    helmet({
+      contentSecurityPolicy: isProd
+        ? {
+            useDefaults: true,
+            directives: {
+              // Backend serves JSON — no scripts or embeds should ever load
+              // from an API response. Locked tight.
+              defaultSrc: ["'self'"],
+              scriptSrc: ["'self'"],
+              styleSrc: ["'self'", "'unsafe-inline'"], // Swagger inlines styles
+              imgSrc: ["'self'", 'data:', 'blob:'],
+              connectSrc: ["'self'"],
+              frameAncestors: ["'none'"],
+              objectSrc: ["'none'"],
+              baseUri: ["'self'"],
+              formAction: ["'self'"],
+              upgradeInsecureRequests: [],
+            },
+          }
+        : false,
+      hsts: isProd
+        ? { maxAge: 15_552_000, includeSubDomains: true, preload: true }
+        : false,
+      // The frontend is on a different origin — we set our own CORS above,
+      // helmet's Cross-Origin-Resource-Policy shouldn't second-guess.
+      crossOriginResourcePolicy: { policy: 'cross-origin' },
+      referrerPolicy: { policy: 'strict-origin-when-cross-origin' },
+    }),
+  );
   app.use(cookieParser());
   app.enableCors({
     origin: (process.env.CORS_ORIGIN ?? 'http://localhost:3000').split(','),

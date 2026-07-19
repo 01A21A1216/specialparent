@@ -1,6 +1,10 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
+  // 'standalone' emits a self-contained .next/standalone/ dir with a minimal
+  // node_modules — used by the production Dockerfile to build a ~200 MB
+  // image instead of ~800 MB. No-op in dev.
+  output: 'standalone',
   experimental: {
     typedRoutes: false,
   },

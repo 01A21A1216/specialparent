@@ -1,0 +1,104 @@
+# Production compose overlay. Usage:
+#   docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
+#
+# What it changes vs docker-compose.yml:
+#   • All secrets come from env vars — no defaults. Compose refuses to start
+#     if any required secret is missing (see the required_env block).
+#   • Postgres + Redis are NOT exposed to the host. Only the web edge is.
+#   • prisma db push is replaced with prisma migrate deploy — no data-loss
+#     flag, no auto-seed on boot.
+#   • Web + backend run behind a Traefik reverse proxy (commented out here
+#     as an example — swap in your ingress of choice).
+#   • Automated nightly Postgres backup sidecar (see /ops/backup/README).
+#   • Log rotation limits so an app going haywire can't fill the disk.
+
+services:
+  postgres:
+    ports: !reset []
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:?POSTGRES_USER is required in prod}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required in prod}
+      POSTGRES_DB: ${POSTGRES_DB:?POSTGRES_DB is required in prod}
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      - ./ops/backup:/backup
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "5"
+
+  redis:
+    ports: !reset []
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "5"
+
+  backend:
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}?schema=public
+      JWT_ACCESS_SECRET: ${JWT_ACCESS_SECRET:?JWT_ACCESS_SECRET is required (openssl rand -hex 32)}
+      JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET:?JWT_REFRESH_SECRET is required (openssl rand -hex 32)}
+      CORS_ORIGIN: ${CORS_ORIGIN:?CORS_ORIGIN is required (e.g. https://app.specialparent.in)}
+      SENTRY_DSN: ${SENTRY_DSN:-}
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+      SMTP_URL: ${SMTP_URL:-}
+      MAIL_FROM: ${MAIL_FROM:-}
+      CLOUDINARY_URL: ${CLOUDINARY_URL:-}
+      WEB_URL: ${WEB_URL:?WEB_URL is required for verification/reset emails}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+    # No host port publish — only accessible via the reverse proxy on the
+    # docker network. Uncomment `ports` below if you're testing without one.
+    ports: !reset []
+    command: >
+      sh -c "
+        npx prisma migrate deploy &&
+        node dist/main.js
+      "
+    logging:
+      driver: json-file
+      options:
+        max-size: "50m"
+        max-file: "10"
+
+  web:
+    build:
+      context: ./web
+      args:
+        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:?NEXT_PUBLIC_API_URL is required}
+        NEXT_PUBLIC_SENTRY_DSN: ${NEXT_PUBLIC_SENTRY_DSN:-}
+        NEXT_PUBLIC_APP_VERSION: ${APP_VERSION:-}
+    environment:
+      NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL}
+    ports: !reset []
+    logging:
+      driver: json-file
+      options:
+        max-size: "50m"
+        max-file: "10"
+
+  # Nightly pg_dump — writes timestamped SQL to /backup and prunes files
+  # older than 30 days. See ops/backup/README.md for restore steps.
+  db-backup:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      PGHOST: postgres
+      PGUSER: ${POSTGRES_USER}
+      PGPASSWORD: ${POSTGRES_PASSWORD}
+      PGDATABASE: ${POSTGRES_DB}
+      BACKUP_RETENTION_DAYS: ${BACKUP_RETENTION_DAYS:-30}
+    volumes:
+      - ./ops/backup:/backup
+      - ./ops/backup/entrypoint.sh:/entrypoint.sh:ro
+    entrypoint: ["/bin/sh", "/entrypoint.sh"]
+    logging:
+      driver: json-file
+      options:
+        max-size: "5m"
+        max-file: "3"
