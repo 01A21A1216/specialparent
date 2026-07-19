@@ -4,10 +4,19 @@ import {
   IsEnum,
   IsOptional,
   IsString,
+  Matches,
   MaxLength,
   MinLength,
 } from 'class-validator';
 import { Language, Role } from '@prisma/client';
+
+// Password rule: 8+ chars, at least one letter, at least one number. Gentle
+// enough not to frustrate users on mobile, strong enough to keep out the
+// worst dictionary passwords ("password", "12345678"). Symbols aren't
+// required — that hurts UX more than it helps security.
+const PASSWORD_REGEX = /^(?=.*[A-Za-z])(?=.*\d).+$/;
+const PASSWORD_MESSAGE =
+  'Password must be at least 8 characters and include a letter and a number';
 
 export class SignupDto {
   @ApiProperty({ example: 'parent@example.com' })
@@ -24,6 +33,7 @@ export class SignupDto {
   @IsString()
   @MinLength(8)
   @MaxLength(128)
+  @Matches(PASSWORD_REGEX, { message: PASSWORD_MESSAGE })
   password!: string;
 
   @ApiProperty({ enum: Role, required: false, default: Role.PARENT })
@@ -89,6 +99,35 @@ export class UpdateMeDto {
   avatarUrl?: string;
 }
 
+export class ForgotPasswordDto {
+  @ApiProperty()
+  @IsEmail()
+  email!: string;
+}
+
+export class ResetPasswordDto {
+  @ApiProperty()
+  @IsString()
+  @MinLength(32)
+  @MaxLength(128)
+  token!: string;
+
+  @ApiProperty()
+  @IsString()
+  @MinLength(8)
+  @MaxLength(128)
+  @Matches(PASSWORD_REGEX, { message: PASSWORD_MESSAGE })
+  newPassword!: string;
+}
+
+export class VerifyEmailDto {
+  @ApiProperty()
+  @IsString()
+  @MinLength(32)
+  @MaxLength(128)
+  token!: string;
+}
+
 export class ChangePasswordDto {
   @ApiProperty()
   @IsString()
@@ -100,5 +139,6 @@ export class ChangePasswordDto {
   @IsString()
   @MinLength(8)
   @MaxLength(128)
+  @Matches(PASSWORD_REGEX, { message: PASSWORD_MESSAGE })
   newPassword!: string;
 }

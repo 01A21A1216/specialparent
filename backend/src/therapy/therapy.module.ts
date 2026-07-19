@@ -14,6 +14,8 @@ import {
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiProperty, ApiTags } from '@nestjs/swagger';
 import {
+  ArrayMaxSize,
+  IsArray,
   IsDateString,
   IsEnum,
   IsInt,
@@ -61,6 +63,13 @@ export class CreateSessionDto {
   @IsOptional()
   @IsString()
   notes?: string;
+
+  @ApiProperty({ required: false, type: [String], description: 'IEP goal ids this session worked on' })
+  @IsOptional()
+  @IsArray()
+  @ArrayMaxSize(20)
+  @IsString({ each: true })
+  iepGoalIds?: string[];
 }
 
 export class UpdateSessionDto {
@@ -69,6 +78,12 @@ export class UpdateSessionDto {
   @IsOptional() @IsEnum(SessionStatus) status?: SessionStatus;
   @IsOptional() @IsString() @MaxLength(5000) notes?: string;
   @IsOptional() @IsString() therapistId?: string;
+
+  @IsOptional()
+  @IsArray()
+  @ArrayMaxSize(20)
+  @IsString({ each: true })
+  iepGoalIds?: string[];
 }
 
 // ─── Service ──────────────────────────────────────────────
@@ -90,6 +105,7 @@ export class TherapyService {
         scheduledAt: new Date(dto.scheduledAt),
         durationMins: dto.durationMins ?? 45,
         notes: dto.notes,
+        iepGoalIds: dto.iepGoalIds ?? [],
       },
     });
   }

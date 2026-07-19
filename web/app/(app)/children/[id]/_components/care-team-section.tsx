@@ -1,24 +1,43 @@
 'use client';
 
 import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { api } from '../../../../../lib/api';
 import { initials } from '../../../../../lib/utils';
 import { ChildDetail } from './types';
 
 export function CareTeamSection({
+  childId,
   caregivers,
   sessions,
   currentUserId,
   canManage,
   onChange,
 }: {
+  childId: string;
   caregivers: ChildDetail['caregivers'];
   sessions: ChildDetail['therapySessions'];
   currentUserId?: string;
   canManage: boolean;
   onChange: () => Promise<void> | void;
 }) {
+  const router = useRouter();
   const [removingId, setRemovingId] = useState<string | null>(null);
+  const [messagingId, setMessagingId] = useState<string | null>(null);
+
+  async function messageUser(userId: string) {
+    setMessagingId(userId);
+    try {
+      const res = await api<{ threadId: string }>('/messages/threads', {
+        method: 'POST',
+        body: { toUserId: userId, childId },
+      });
+      router.push(`/messages?thread=${res.threadId}`);
+    } catch (err) {
+      alert(err instanceof Error ? err.message : 'Could not open message thread');
+      setMessagingId(null);
+    }
+  }
 
   // Unique therapists who have sessions with this child but aren't yet in
   // the Caregiver table (e.g. self-added by admin, or historical data).
@@ -89,6 +108,16 @@ export function CareTeamSection({
                         {c.user.role.toLowerCase().replace('_', ' ')}
                       </div>
                     </div>
+                    {!isSelf && (
+                      <button
+                        onClick={() => messageUser(c.user.id)}
+                        disabled={messagingId === c.user.id}
+                        className="btn-ghost text-xs flex-shrink-0"
+                        title={`Message ${c.user.fullName}`}
+                      >
+                        {messagingId === c.user.id ? '…' : '💬 Message'}
+                      </button>
+                    )}
                     {removable && (
                       <button
                         onClick={() => remove(c)}
@@ -126,6 +155,15 @@ export function CareTeamSection({
                     <div className="font-medium text-sage-900 truncate">{t.fullName}</div>
                     <div className="text-xs text-sage-500">therapist</div>
                   </div>
+                  {t.id !== currentUserId && (
+                    <button
+                      onClick={() => messageUser(t.id)}
+                      disabled={messagingId === t.id}
+                      className="btn-ghost text-xs flex-shrink-0"
+                    >
+                      {messagingId === t.id ? '…' : '💬 Message'}
+                    </button>
+                  )}
                 </li>
               ))}
             </ul>

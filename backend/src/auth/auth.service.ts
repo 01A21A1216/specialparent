@@ -1,15 +1,22 @@
 import {
   BadRequestException,
-  ConflictException,
   Injectable,
+  Logger,
+  NotFoundException,
+  ConflictException,
   UnauthorizedException,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcryptjs';
 import * as crypto from 'crypto';
+import { AuthTokenType } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
+import { MailerService } from '../common/mail/mail.module';
 import { ChangePasswordDto, LoginDto, SignupDto, UpdateMeDto } from './auth.dto';
+
+const PASSWORD_RESET_TTL_MIN = 60; // 1 hour
+const EMAIL_VERIFY_TTL_MIN = 60 * 24 * 3; // 3 days
 
 export interface TokenPair {
   accessToken: string;
@@ -19,10 +26,13 @@ export interface TokenPair {
 
 @Injectable()
 export class AuthService {
+  private readonly logger = new Logger(AuthService.name);
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly jwt: JwtService,
     private readonly config: ConfigService,
+    private readonly mail: MailerService,
   ) {}
 
   async signup(dto: SignupDto) {
@@ -44,8 +54,124 @@ export class AuthService {
       select: this.userSelect(),
     });
 
+    // Best-effort verification email — never blocks signup.
+    this.sendVerificationEmail(user.id).catch((err) =>
+      this.logger.warn(`Verification mail failed for ${user.id}: ${err?.message}`),
+    );
+
     const tokens = await this.issueTokens(user.id);
     return { user, ...tokens };
+  }
+
+  // ── Password reset ─────────────────────────────────────
+  // Never leak whether an email exists — always return { ok: true }.
+  async requestPasswordReset(rawEmail: string): Promise<{ ok: true }> {
+    const email = rawEmail.toLowerCase().trim();
+    const user = await this.prisma.user.findUnique({ where: { email } });
+    if (!user || !user.isActive) return { ok: true };
+
+    const { rawToken, tokenHash, expiresAt } = this.newToken(PASSWORD_RESET_TTL_MIN);
+    await this.prisma.authToken.create({
+      data: { userId: user.id, type: 'PASSWORD_RESET', tokenHash, expiresAt },
+    });
+
+    const link = `${this.webUrl()}/reset-password?token=${rawToken}`;
+    await this.mail.send({
+      to: user.email,
+      subject: 'Reset your SpecialParent.in password',
+      html: `
+        <p>Hi ${escapeHtml(user.fullName)},</p>
+        <p>Someone (hopefully you) asked to reset the password on your SpecialParent.in account.</p>
+        <p><a href="${link}">Click here to choose a new password</a>. This link is valid for the next hour.</p>
+        <p>If you didn't request this, you can ignore this email — your account stays as it was.</p>
+      `,
+    });
+    return { ok: true };
+  }
+
+  async resetPassword(rawToken: string, newPassword: string): Promise<{ ok: true }> {
+    const token = await this.consumeToken(rawToken, 'PASSWORD_RESET');
+    const passwordHash = await bcrypt.hash(newPassword, 12);
+    // Password change → revoke every existing refresh token; user must log in again everywhere.
+    await this.prisma.$transaction([
+      this.prisma.user.update({
+        where: { id: token.userId },
+        data: { passwordHash },
+      }),
+      this.prisma.refreshToken.updateMany({
+        where: { userId: token.userId, revokedAt: null },
+        data: { revokedAt: new Date() },
+      }),
+    ]);
+    return { ok: true };
+  }
+
+  // ── Email verification ────────────────────────────────
+  async sendVerificationEmail(userId: string): Promise<{ ok: true }> {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: { id: true, email: true, fullName: true, emailVerifiedAt: true },
+    });
+    if (!user) throw new NotFoundException('User not found');
+    if (user.emailVerifiedAt) return { ok: true }; // already verified — no-op
+
+    const { rawToken, tokenHash, expiresAt } = this.newToken(EMAIL_VERIFY_TTL_MIN);
+    await this.prisma.authToken.create({
+      data: { userId: user.id, type: 'EMAIL_VERIFICATION', tokenHash, expiresAt },
+    });
+
+    const link = `${this.webUrl()}/verify-email?token=${rawToken}`;
+    await this.mail.send({
+      to: user.email,
+      subject: 'Verify your SpecialParent.in email',
+      html: `
+        <p>Hi ${escapeHtml(user.fullName)},</p>
+        <p>Confirm this email is yours so we can send you appointment reminders and important account notices.</p>
+        <p><a href="${link}">Verify your email address</a>. This link is valid for the next 3 days.</p>
+      `,
+    });
+    return { ok: true };
+  }
+
+  async verifyEmail(rawToken: string): Promise<{ ok: true }> {
+    const token = await this.consumeToken(rawToken, 'EMAIL_VERIFICATION');
+    await this.prisma.user.update({
+      where: { id: token.userId },
+      data: { emailVerifiedAt: new Date() },
+    });
+    return { ok: true };
+  }
+
+  private newToken(ttlMin: number) {
+    const rawToken = crypto.randomBytes(32).toString('hex'); // 64 char hex
+    const tokenHash = this.hash(rawToken);
+    const expiresAt = new Date(Date.now() + ttlMin * 60_000);
+    return { rawToken, tokenHash, expiresAt };
+  }
+
+  private async consumeToken(rawToken: string, type: AuthTokenType) {
+    if (!rawToken || rawToken.length !== 64) {
+      throw new BadRequestException('Invalid or expired token');
+    }
+    const tokenHash = this.hash(rawToken);
+    const record = await this.prisma.authToken.findUnique({ where: { tokenHash } });
+    if (
+      !record ||
+      record.type !== type ||
+      record.usedAt !== null ||
+      record.expiresAt < new Date()
+    ) {
+      throw new BadRequestException('Invalid or expired token');
+    }
+    await this.prisma.authToken.update({
+      where: { id: record.id },
+      data: { usedAt: new Date() },
+    });
+    return record;
+  }
+
+  private webUrl(): string {
+    return (this.config.get<string>('WEB_URL') ?? 'http://localhost:3000').replace(/\/$/, '');
   }
 
   async login(dto: LoginDto, meta?: { ip?: string; ua?: string }) {
@@ -160,6 +286,7 @@ export class AuthService {
       role: true,
       preferredLanguage: true,
       avatarUrl: true,
+      emailVerifiedAt: true,
       createdAt: true,
       lastLoginAt: true,
     } as const;
@@ -198,4 +325,15 @@ export class AuthService {
 
     return { accessToken, refreshToken, expiresIn: accessTtl };
   }
+}
+
+// Small helper for the plain-text email templates. Keeps HTML from being
+// derived from user-controlled data (fullName).
+function escapeHtml(s: string): string {
+  return s
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
 }

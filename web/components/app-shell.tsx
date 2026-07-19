@@ -5,6 +5,8 @@ import { usePathname, useRouter } from 'next/navigation';
 import type React from 'react';
 import { useEffect, useState } from 'react';
 import { useAuth } from './auth-provider';
+import { api } from '../lib/api';
+import { useApi } from '../lib/swr';
 import { cn, initials } from '../lib/utils';
 import {
   BellIcon,
@@ -36,8 +38,11 @@ type NavItem = {
 const NAV_PARENT: NavItem[] = [
   { href: '/dashboard', label: 'Dashboard', icon: HomeIcon },
   { href: '/children', label: 'Children', icon: HeartIcon },
+  { href: '/insights', label: 'Insights', icon: SparkleIcon },
   { href: '/therapy', label: 'Therapy', icon: SparkleIcon },
   { href: '/appointments', label: 'Appointments', icon: CalendarIcon },
+  { href: '/messages', label: 'Messages', icon: ChatIcon },
+  { href: '/documents', label: 'Documents', icon: BookIcon },
   { href: '/notifications', label: 'Notifications', icon: BellIcon },
   { href: '/aac', label: 'Communication', icon: SpeechIcon },
   { href: '/community', label: 'Community', icon: ChatIcon },
@@ -52,6 +57,7 @@ const NAV_THERAPIST: NavItem[] = [
   { href: '/children', label: 'My caseload', icon: HeartIcon },
   { href: '/therapy', label: 'Sessions', icon: SparkleIcon },
   { href: '/appointments', label: 'Appointments', icon: CalendarIcon },
+  { href: '/messages', label: 'Messages', icon: ChatIcon },
   { href: '/notifications', label: 'Notifications', icon: BellIcon },
   { href: '/community', label: 'Community', icon: ChatIcon },
   { href: '/resources', label: 'Resources', icon: BookIcon },
@@ -98,6 +104,13 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   // Desktop-only: sidebar can collapse to an icon-only rail. Persisted so it
   // survives navigation and reloads.
   const [desktopCollapsed, setDesktopCollapsed] = useState(false);
+
+  // Poll every 30s for the message unread count — cheap query, feeds the
+  // sidebar badge. Skipped when the user isn't loaded yet.
+  const { data: unreadMessages } = useApi<{ count: number }>(
+    user ? '/messages/unread-count' : null,
+    { refreshInterval: 30_000 },
+  );
 
   useEffect(() => {
     if (!loading && !user) {
@@ -240,23 +253,46 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               const active =
                 pathname === item.href || pathname?.startsWith(item.href + '/');
               const Icon = item.icon;
+              const badge =
+                item.href === '/messages' && (unreadMessages?.count ?? 0) > 0
+                  ? unreadMessages!.count
+                  : 0;
               return (
                 <Link
                   key={item.href}
                   href={item.href}
                   title={desktopCollapsed ? item.label : undefined}
                   className={cn(
-                    'flex items-center gap-3 rounded-2xl font-medium transition-colors px-4 py-3',
+                    'flex items-center gap-3 rounded-2xl font-medium transition-colors px-4 py-3 relative',
                     desktopCollapsed && 'lg:justify-center lg:px-0',
                     active
                       ? 'bg-sage-600 text-cream-50 shadow-soft'
                       : 'text-sage-700 hover:bg-sage-100',
                   )}
                 >
-                  <Icon className="w-5 h-5 flex-shrink-0" />
+                  <span className="relative flex-shrink-0">
+                    <Icon className="w-5 h-5" />
+                    {badge > 0 && desktopCollapsed && (
+                      // Collapsed sidebar → tiny dot on the icon so users
+                      // still see the unread indicator with no label present.
+                      <span className="absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full bg-coral-500 ring-2 ring-cream-50" />
+                    )}
+                  </span>
                   <span className={cn(desktopCollapsed && 'lg:hidden')}>
                     {item.label}
                   </span>
+                  {badge > 0 && !desktopCollapsed && (
+                    <span
+                      className={cn(
+                        'ml-auto text-xs font-semibold rounded-full min-w-[1.5rem] px-1.5 py-0.5 text-center tabular-nums',
+                        active
+                          ? 'bg-cream-50 text-sage-800'
+                          : 'bg-coral-500 text-white',
+                      )}
+                    >
+                      {badge > 99 ? '99+' : badge}
+                    </span>
+                  )}
                 </Link>
               );
             })}
@@ -331,8 +367,72 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         </aside>
 
         <main className="flex-1 min-w-0 px-5 sm:px-8 py-8 lg:py-10 lg:pr-12">
+          <UnverifiedEmailBanner />
           {children}
         </main>
+      </div>
+    </div>
+  );
+}
+
+function UnverifiedEmailBanner() {
+  const { user, refresh } = useAuth();
+  const [dismissed, setDismissed] = useState(false);
+  const [sending, setSending] = useState(false);
+  const [sent, setSent] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  // Only show for signed-in users whose email isn't verified. Dismissal is
+  // per-session — deliberately not persistent so the reminder resurfaces.
+  if (!user || user.emailVerifiedAt || dismissed) return null;
+
+  async function resend() {
+    setSending(true);
+    setError(null);
+    try {
+      await api('/auth/send-verification', { method: 'POST' });
+      setSent(true);
+      // Backend keeps emailVerifiedAt null until the user clicks the link;
+      // refresh so once they do, the banner disappears on next mount.
+      await refresh();
+    } catch (e: any) {
+      setError(e?.message ?? 'Could not resend');
+    } finally {
+      setSending(false);
+    }
+  }
+
+  return (
+    <div className="mb-6 rounded-2xl bg-cream-200 border border-cream-300 p-4 flex items-center gap-3 flex-wrap">
+      <span className="text-lg">✉️</span>
+      <div className="flex-1 min-w-[220px]">
+        <div className="font-medium text-sage-900">
+          Please verify your email address.
+        </div>
+        <p className="text-sm text-sage-700 mt-0.5">
+          {sent
+            ? 'Verification email sent — check your inbox (and spam).'
+            : `We sent a verification link to ${user.email}. Confirm it to secure your account.`}
+          {error && <span className="text-coral-700 block mt-1">{error}</span>}
+        </p>
+      </div>
+      <div className="flex gap-2">
+        <button
+          type="button"
+          onClick={resend}
+          disabled={sending || sent}
+          className="chip bg-sage-100 text-sage-800 hover:bg-sage-200 disabled:opacity-60"
+        >
+          {sending ? 'Sending…' : sent ? 'Sent ✓' : 'Resend link'}
+        </button>
+        <button
+          type="button"
+          onClick={() => setDismissed(true)}
+          className="text-sage-500 hover:text-sage-800"
+          aria-label="Dismiss"
+        >
+          ×
+        </button>
       </div>
     </div>
   );

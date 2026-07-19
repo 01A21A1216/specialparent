@@ -153,24 +153,26 @@ export default function EmergencyPage() {
                     No emergency contact saved. Add one on the child's profile.
                   </p>
                 )}
-                {(c.allergies.length > 0 || c.medications.length > 0) && (
+                {((c.allergies?.length ?? 0) > 0 ||
+                  (c.medications?.length ?? 0) > 0 ||
+                  (c.sensoryTriggers?.length ?? 0) > 0) && (
                   <div className="mt-4 space-y-2 text-sm">
-                    {c.allergies.length > 0 && (
+                    {(c.allergies?.length ?? 0) > 0 && (
                       <div>
                         <span className="text-coral-700 font-medium">Allergies:</span>{' '}
-                        <span className="text-sage-700">{c.allergies.join(', ')}</span>
+                        <span className="text-sage-700">{c.allergies!.join(', ')}</span>
                       </div>
                     )}
-                    {c.medications.length > 0 && (
+                    {(c.medications?.length ?? 0) > 0 && (
                       <div>
                         <span className="text-sage-700 font-medium">Medications:</span>{' '}
-                        <span className="text-sage-700">{c.medications.join(', ')}</span>
+                        <span className="text-sage-700">{c.medications!.join(', ')}</span>
                       </div>
                     )}
-                    {c.sensoryTriggers.length > 0 && (
+                    {(c.sensoryTriggers?.length ?? 0) > 0 && (
                       <div>
                         <span className="text-mist-700 font-medium">Known triggers:</span>{' '}
-                        <span className="text-sage-700">{c.sensoryTriggers.join(', ')}</span>
+                        <span className="text-sage-700">{c.sensoryTriggers!.join(', ')}</span>
                       </div>
                     )}
                   </div>

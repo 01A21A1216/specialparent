@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Suspense, useState } from 'react';
 import { AuthLayout } from '../../components/auth-layout';
+import { AuthPageFallback } from '../../components/auth-page-fallback';
 import { useAuth } from '../../components/auth-provider';
 
 type SignupRole = 'PARENT' | 'THERAPIST' | 'DOCTOR' | 'TEACHER' | 'SPECIAL_EDUCATOR' | 'SCHOOL_ADMIN';
@@ -150,7 +151,14 @@ function SignupForm() {
 
 export default function SignupPage() {
   return (
-    <Suspense fallback={<div />}>
+    <Suspense
+      fallback={
+        <AuthPageFallback
+          title="Create your account"
+          subtitle="Free for parents. No payment details required."
+        />
+      }
+    >
       <SignupForm />
     </Suspense>
   );

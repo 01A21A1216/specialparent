@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Suspense, useState } from 'react';
 import { AuthLayout } from '../../components/auth-layout';
+import { AuthPageFallback } from '../../components/auth-page-fallback';
 import { useAuth } from '../../components/auth-provider';
 
 function LoginForm() {
@@ -77,6 +78,15 @@ function LoginForm() {
           {loading ? 'Signing in…' : 'Sign in'}
         </button>
 
+        <p className="text-center text-sm">
+          <Link
+            href="/forgot-password"
+            className="text-sage-600 hover:text-sage-900 underline underline-offset-2 decoration-sage-300"
+          >
+            Forgot your password?
+          </Link>
+        </p>
+
         <div className="rounded-2xl bg-sage-50 border border-sage-100 p-4 text-sm text-sage-700">
           <strong className="text-sage-900">Demo accounts</strong> (password{' '}
           <code className="bg-white px-1.5 py-0.5 rounded text-xs">Demo1234!</code>):
@@ -102,7 +112,14 @@ function LoginForm() {
 
 export default function LoginPage() {
   return (
-    <Suspense fallback={<div />}>
+    <Suspense
+      fallback={
+        <AuthPageFallback
+          title="Welcome back."
+          subtitle="Sign in to your SpecialParent.in account."
+        />
+      }
+    >
       <LoginForm />
     </Suspense>
   );

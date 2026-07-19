@@ -72,6 +72,11 @@ export class CreateChildDto {
   @IsString()
   schoolName?: string;
 
+  @ApiProperty({ required: false, description: 'Link to a School row (preferred over free-text schoolName)' })
+  @IsOptional()
+  @IsString()
+  schoolId?: string;
+
   @ApiProperty({ required: false })
   @IsOptional()
   @IsString()
@@ -100,6 +105,7 @@ export class UpdateChildDto {
   @IsOptional() @IsArray() @IsString({ each: true }) hobbies?: string[];
   @IsOptional() @IsString() communicationType?: string;
   @IsOptional() @IsString() schoolName?: string;
+  @IsOptional() @IsString() schoolId?: string;
   @IsOptional() @IsString() emergencyContact?: string;
   @IsOptional() @IsString() notes?: string;
 }

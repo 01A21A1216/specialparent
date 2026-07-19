@@ -73,7 +73,8 @@ function categoryLabel(cat: string) {
 }
 
 export default function ResourcesPage() {
-  const { data, isLoading: loading } = useApi<Resource[]>('/public/resources');
+  const { data, isLoading: loading, error, mutate } =
+    useApi<Resource[]>('/public/resources');
   const resources = data ?? [];
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
 
@@ -109,7 +110,24 @@ export default function ResourcesPage() {
       </header>
 
       {loading ? (
-        <div className="text-sage-500">Loading…</div>
+        <div className="card animate-pulse space-y-3">
+          <div className="h-4 bg-sage-100 rounded w-1/3" />
+          <div className="h-3 bg-sage-100 rounded" />
+        </div>
+      ) : error ? (
+        <div className="card border-coral-200 bg-coral-50 text-coral-800">
+          <div className="font-medium">Couldn't load resources.</div>
+          <p className="text-sm mt-1 text-coral-700">
+            {error.message || 'Something went wrong. Try again in a moment.'}
+          </p>
+          <button
+            type="button"
+            onClick={() => mutate()}
+            className="btn-ghost text-sm mt-3"
+          >
+            Try again
+          </button>
+        </div>
       ) : resources.length === 0 ? (
         <div className="card text-center py-10 text-sage-500">
           No resources published yet.

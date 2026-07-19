@@ -1,12 +1,20 @@
 import { ValidationPipe, Logger } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
+import { Logger as PinoLogger } from 'nestjs-pino';
 import helmet from 'helmet';
 import cookieParser from 'cookie-parser';
+import { initSentry } from './common/sentry';
 import { AppModule } from './app.module';
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule, { bufferLogs: false });
+  // Init Sentry BEFORE the app so early boot errors get reported too.
+  initSentry();
+
+  // bufferLogs so early startup lines can be replayed through pino once the
+  // LoggerModule has registered — otherwise we'd get a mix of stdout + pino.
+  const app = await NestFactory.create(AppModule, { bufferLogs: true });
+  app.useLogger(app.get(PinoLogger));
   const logger = new Logger('Bootstrap');
 
   app.use(helmet());

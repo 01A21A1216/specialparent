@@ -11,14 +11,18 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
+import { Throttle } from '@nestjs/throttler';
 import type { Request, Response } from 'express';
 import { AuthService } from './auth.service';
 import {
   ChangePasswordDto,
+  ForgotPasswordDto,
   LoginDto,
   RefreshDto,
+  ResetPasswordDto,
   SignupDto,
   UpdateMeDto,
+  VerifyEmailDto,
 } from './auth.dto';
 import { JwtAuthGuard } from './jwt-auth.guard';
 import { CurrentUser, AuthUser } from '../common/current-user.decorator';
@@ -34,6 +38,7 @@ export class AuthController {
   constructor(private readonly auth: AuthService) {}
 
   @Post('signup')
+  @Throttle({ auth: { limit: 5, ttl: 60_000 } })
   @ApiOperation({ summary: 'Create a new account' })
   async signup(
     @Body() dto: SignupDto,
@@ -46,6 +51,7 @@ export class AuthController {
 
   @Post('login')
   @HttpCode(200)
+  @Throttle({ auth: { limit: 10, ttl: 60_000 } })
   @ApiOperation({ summary: 'Email + password login' })
   async login(
     @Body() dto: LoginDto,
@@ -112,10 +118,48 @@ export class AuthController {
 
   @Post('change-password')
   @HttpCode(200)
+  @Throttle({ auth: { limit: 5, ttl: 60_000 } })
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Change password (revokes all other sessions)' })
   changePassword(@CurrentUser() user: AuthUser, @Body() dto: ChangePasswordDto) {
     return this.auth.changePassword(user.id, dto);
+  }
+
+  @Post('forgot-password')
+  @HttpCode(200)
+  @Throttle({ auth: { limit: 3, ttl: 60_000 } })
+  @ApiOperation({
+    summary: 'Send a password-reset email',
+    description: 'Always returns 200 to avoid leaking which addresses have accounts.',
+  })
+  forgotPassword(@Body() dto: ForgotPasswordDto) {
+    return this.auth.requestPasswordReset(dto.email);
+  }
+
+  @Post('reset-password')
+  @HttpCode(200)
+  @Throttle({ auth: { limit: 5, ttl: 60_000 } })
+  @ApiOperation({ summary: 'Complete a password reset with a token' })
+  resetPassword(@Body() dto: ResetPasswordDto) {
+    return this.auth.resetPassword(dto.token, dto.newPassword);
+  }
+
+  @Post('send-verification')
+  @HttpCode(200)
+  @Throttle({ auth: { limit: 3, ttl: 60_000 } })
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Resend the email-verification link' })
+  sendVerification(@CurrentUser() user: AuthUser) {
+    return this.auth.sendVerificationEmail(user.id);
+  }
+
+  @Post('verify-email')
+  @HttpCode(200)
+  @Throttle({ auth: { limit: 10, ttl: 60_000 } })
+  @ApiOperation({ summary: 'Confirm the email-verification token' })
+  verifyEmail(@Body() dto: VerifyEmailDto) {
+    return this.auth.verifyEmail(dto.token);
   }
 }

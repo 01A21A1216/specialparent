@@ -119,7 +119,160 @@ export default function ProfilePage() {
       />
 
       <ChangePasswordCard />
+
+      <PrivacyCard onDeleted={() => { window.location.href = '/'; }} />
     </div>
+  );
+}
+
+function PrivacyCard({ onDeleted }: { onDeleted: () => void }) {
+  const [exporting, setExporting] = useState(false);
+  const [showDelete, setShowDelete] = useState(false);
+  const [pw, setPw] = useState('');
+  const [confirmText, setConfirmText] = useState('');
+  const [deleting, setDeleting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  async function exportData() {
+    setExporting(true);
+    try {
+      // Fetch directly (not through api()) so we can pass the raw body
+      // to a Blob and trigger a download of the DPDP export JSON.
+      const base =
+        typeof window !== 'undefined' && window.location.origin.includes('localhost')
+          ? 'http://localhost:4000'
+          : '';
+      const res = await fetch(`${base}/api/privacy/export`, {
+        credentials: 'include',
+      });
+      if (!res.ok) throw new Error('Export failed');
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `specialparent-export-${new Date().toISOString().slice(0, 10)}.json`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+    } catch (e) {
+      alert(e instanceof Error ? e.message : 'Export failed');
+    } finally {
+      setExporting(false);
+    }
+  }
+
+  async function deleteAccount(e: React.FormEvent) {
+    e.preventDefault();
+    setDeleting(true);
+    setError(null);
+    try {
+      await api('/privacy/account', {
+        method: 'DELETE',
+        body: { currentPassword: pw, confirm: confirmText },
+      });
+      onDeleted();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Deletion failed');
+      setDeleting(false);
+    }
+  }
+
+  return (
+    <section>
+      <h2 className="font-display text-2xl text-sage-900 mb-4">Privacy &amp; your data</h2>
+      <div className="card space-y-6 max-w-lg">
+        <div>
+          <h3 className="font-medium text-sage-900">Download your data</h3>
+          <p className="text-sm text-sage-600 mt-1">
+            Get a JSON copy of every piece of personal data SpecialParent.in holds
+            about you (and your children where you are the primary caregiver). Under
+            India's DPDP Act 2023 this is your right.
+          </p>
+          <button
+            type="button"
+            onClick={exportData}
+            disabled={exporting}
+            className="btn-ghost text-sm mt-3"
+          >
+            {exporting ? 'Preparing…' : '⬇ Download my data (.json)'}
+          </button>
+        </div>
+
+        <div className="border-t border-sage-100 pt-6">
+          <h3 className="font-medium text-coral-800">Delete your account</h3>
+          <p className="text-sm text-sage-600 mt-1">
+            Permanently deletes your account and every child on your account where
+            you are the only caregiver. Children co-caregivers still care for are
+            preserved. This cannot be undone.
+          </p>
+          {!showDelete ? (
+            <button
+              type="button"
+              onClick={() => setShowDelete(true)}
+              className="btn-ghost text-sm mt-3 text-coral-700 hover:bg-coral-50"
+            >
+              Delete my account…
+            </button>
+          ) : (
+            <form onSubmit={deleteAccount} className="mt-4 space-y-3 rounded-2xl bg-coral-50 border border-coral-200 p-4">
+              {error && (
+                <div className="text-sm text-coral-800">{error}</div>
+              )}
+              <div>
+                <label className="label">Current password</label>
+                <input
+                  type="password"
+                  className="input"
+                  required
+                  value={pw}
+                  onChange={(e) => setPw(e.target.value)}
+                  autoComplete="current-password"
+                />
+              </div>
+              <div>
+                <label className="label">
+                  Type <code className="bg-white px-1.5 py-0.5 rounded text-xs">delete my account</code> to confirm
+                </label>
+                <input
+                  type="text"
+                  className="input"
+                  required
+                  value={confirmText}
+                  onChange={(e) => setConfirmText(e.target.value)}
+                  placeholder="delete my account"
+                />
+              </div>
+              <div className="flex gap-2 justify-end">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowDelete(false);
+                    setPw('');
+                    setConfirmText('');
+                    setError(null);
+                  }}
+                  className="btn-ghost text-sm"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={
+                    deleting ||
+                    !pw ||
+                    confirmText.trim().toLowerCase() !== 'delete my account'
+                  }
+                  className="btn-primary text-sm bg-coral-600 hover:bg-coral-700"
+                >
+                  {deleting ? 'Deleting…' : 'Delete permanently'}
+                </button>
+              </div>
+            </form>
+          )}
+        </div>
+      </div>
+    </section>
   );
 }
 

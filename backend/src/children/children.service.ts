@@ -27,6 +27,7 @@ export class ChildrenService {
         hobbies: dto.hobbies ?? [],
         communicationType: dto.communicationType,
         schoolName: dto.schoolName,
+        schoolId: dto.schoolId,
         emergencyContact: dto.emergencyContact,
         notes: dto.notes,
         caregivers: {
@@ -51,7 +52,29 @@ export class ChildrenService {
     return this.prisma.child.findMany({
       where: { caregivers: { some: { userId } } },
       orderBy: { createdAt: 'desc' },
-      include: {
+      // Explicit shape so downstream pages can rely on which fields are
+      // present. This list must include everything the emergency page +
+      // family tile + child cards read, otherwise .length on undefined
+      // crashes at render time. When adding a page that reads a new field,
+      // add it here.
+      select: {
+        id: true,
+        fullName: true,
+        dateOfBirth: true,
+        gender: true,
+        photoUrl: true,
+        diagnoses: true,
+        allergies: true,
+        medications: true,
+        sensoryTriggers: true,
+        calmingStrategies: true,
+        hobbies: true,
+        communicationType: true,
+        emergencyContact: true,
+        siblingGroupId: true,
+        schoolId: true,
+        schoolName: true,
+        createdAt: true,
         _count: { select: { milestones: true, therapySessions: true, goals: true } },
       },
     });
@@ -71,6 +94,7 @@ export class ChildrenService {
         },
         moodEntries: { orderBy: { loggedAt: 'desc' }, take: 30 },
         diagnosticReports: { orderBy: { createdAt: 'desc' } },
+        school: true,
       },
     });
     if (!child) throw new NotFoundException('Child not found');

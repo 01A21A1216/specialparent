@@ -5,6 +5,7 @@ import { useAuth } from '../../../components/auth-provider';
 import { useApi } from '../../../lib/swr';
 import { ageInYears, formatDateTime, initials } from '../../../lib/utils';
 import { AiRecommendationsTile } from './_components/ai-recommendations';
+import { FamilyTile } from './_components/family-tile';
 
 interface DashboardData {
   children: Array<{
@@ -50,7 +51,12 @@ const moodEmoji: Record<string, string> = {
 
 export default function DashboardPage() {
   const { user } = useAuth();
-  const { data, isLoading: loading } = useApi<DashboardData>('/users/dashboard');
+  const {
+    data,
+    isLoading: loading,
+    error,
+    mutate,
+  } = useApi<DashboardData>('/users/dashboard');
 
   if (!user) return null;
 
@@ -101,6 +107,20 @@ export default function DashboardPage() {
 
       {loading ? (
         <SkeletonGrid />
+      ) : error ? (
+        <div className="card border-coral-200 bg-coral-50 text-coral-800">
+          <div className="font-medium">Couldn't load your dashboard.</div>
+          <p className="text-sm mt-1 text-coral-700">
+            {error.message || 'Something went wrong. Try again in a moment.'}
+          </p>
+          <button
+            type="button"
+            onClick={() => mutate()}
+            className="btn-ghost text-sm mt-3"
+          >
+            Try again
+          </button>
+        </div>
       ) : (
         <>
           {/* Children */}
@@ -156,6 +176,9 @@ export default function DashboardPage() {
               </Link>
             </div>
           </section>
+
+          {/* Family tile — parents with 2+ children */}
+          {role === 'PARENT' && (data?.children.length ?? 0) >= 2 && <FamilyTile />}
 
           {/* AI ideas — parents only, when at least one child exists */}
           {role === 'PARENT' && data?.children?.[0] && (

@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { api } from '../../../../../lib/api';
 import { FieldGroup } from './field-group';
+import { SchoolPicker } from './school-picker';
 import { ChildDetail } from './types';
 
 export function EditProfilePanel({
@@ -29,6 +30,7 @@ export function EditProfilePanel({
     hobbies: child.hobbies.join(', '),
     communicationType: child.communicationType ?? '',
     schoolName: child.schoolName ?? '',
+    schoolId: child.schoolId ?? null,
     emergencyContact: child.emergencyContact ?? '',
     notes: child.notes ?? '',
   });
@@ -78,6 +80,7 @@ export function EditProfilePanel({
           hobbies: csv(form.hobbies),
           communicationType: form.communicationType || undefined,
           schoolName: form.schoolName || undefined,
+          schoolId: form.schoolId ?? undefined,
           emergencyContact: form.emergencyContact || undefined,
           notes: form.notes || undefined,
         },
@@ -219,11 +222,12 @@ export function EditProfilePanel({
           </div>
           <div>
             <label className="label">School</label>
-            <input
-              className="input"
-              value={form.schoolName}
-              onChange={(e) => upd('schoolName', e.target.value)}
-              placeholder="Inclusive Wings School"
+            <SchoolPicker
+              value={form.schoolId}
+              displayName={form.schoolName}
+              onPick={({ id, name }) =>
+                setForm((f) => ({ ...f, schoolId: id, schoolName: name }))
+              }
             />
           </div>
           <div>

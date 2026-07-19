@@ -11,14 +11,25 @@ import { CareTeamSection } from './_components/care-team-section';
 import { EditProfilePanel } from './_components/edit-profile-panel';
 import { Field } from './_components/field';
 import { GoalsTab } from './_components/goals-tab';
+import { IepTab } from './_components/iep-tab';
 import { InviteManager } from './_components/invite-manager';
 import { MilestonesTab } from './_components/milestones-tab';
 import { MoodTab } from './_components/mood-tab';
 import { ReportsTab } from './_components/reports-tab';
+import { RoutineTab } from './_components/routine-tab';
 import { SessionsTab } from './_components/sessions-tab';
+import { SiblingsSection } from './_components/siblings-section';
 import { ChildDetail } from './_components/types';
 
-type TabKey = 'milestones' | 'goals' | 'sessions' | 'mood' | 'behavior' | 'reports';
+type TabKey =
+  | 'routine'
+  | 'milestones'
+  | 'goals'
+  | 'sessions'
+  | 'mood'
+  | 'behavior'
+  | 'iep'
+  | 'reports';
 
 export default function ChildDetailPage() {
   const params = useParams<{ id: string }>();
@@ -27,7 +38,7 @@ export default function ChildDetailPage() {
   const id = params.id;
   const [child, setChild] = useState<ChildDetail | null>(null);
   const [loading, setLoading] = useState(true);
-  const [tab, setTab] = useState<TabKey>('milestones');
+  const [tab, setTab] = useState<TabKey>('routine');
   const [editing, setEditing] = useState(false);
 
   async function load() {
@@ -131,12 +142,17 @@ export default function ChildDetailPage() {
 
       {!editing && (
         <CareTeamSection
+          childId={child.id}
           caregivers={child.caregivers}
           sessions={child.therapySessions}
           currentUserId={user?.id}
           canManage={isPrimary}
           onChange={load}
         />
+      )}
+
+      {!editing && (
+        <SiblingsSection childId={child.id} canManage={isPrimary} />
       )}
 
       {!editing && isPrimary && (
@@ -147,11 +163,13 @@ export default function ChildDetailPage() {
       <div className="flex gap-2 flex-wrap border-b border-sage-100">
         {(
           [
+            ['routine', 'Routine'],
             ['milestones', `Milestones (${child.milestones.length})`],
             ['goals', `Goals (${child.goals.length})`],
             ['sessions', `Sessions (${child.therapySessions.length})`],
             ['mood', `Mood (${child.moodEntries.length})`],
             ['behavior', 'Behavior'],
+            ['iep', 'IEP'],
             ['reports', `Reports (${child.diagnosticReports.length})`],
           ] as const
         ).map(([key, label]) => (
@@ -169,6 +187,7 @@ export default function ChildDetailPage() {
         ))}
       </div>
 
+      {tab === 'routine' && <RoutineTab childId={child.id} />}
       {tab === 'milestones' && (
         <MilestonesTab childId={child.id} milestones={child.milestones} onChange={load} />
       )}
@@ -176,6 +195,7 @@ export default function ChildDetailPage() {
       {tab === 'sessions' && <SessionsTab sessions={child.therapySessions} />}
       {tab === 'mood' && <MoodTab childId={child.id} moods={child.moodEntries} onChange={load} />}
       {tab === 'behavior' && <BehaviorTab childId={child.id} />}
+      {tab === 'iep' && <IepTab childId={child.id} />}
       {tab === 'reports' && (
         <ReportsTab childId={child.id} reports={child.diagnosticReports} onChange={load} />
       )}

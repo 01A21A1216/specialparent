@@ -27,7 +27,8 @@ const CATEGORY_LABEL: Record<string, string> = {
 };
 
 export default function CommunityPage() {
-  const { data, isLoading: loading, mutate } = useApi<Post[]>('/community/posts');
+  const { data, isLoading: loading, error, mutate } =
+    useApi<Post[]>('/community/posts');
   const posts = data ?? [];
   const [showForm, setShowForm] = useState(false);
 
@@ -100,9 +101,33 @@ export default function CommunityPage() {
       )}
 
       {loading ? (
-        <div className="text-sage-500">Loading…</div>
+        <div className="card animate-pulse space-y-3">
+          <div className="h-4 bg-sage-100 rounded w-1/3" />
+          <div className="h-3 bg-sage-100 rounded" />
+        </div>
+      ) : error ? (
+        <div className="card border-coral-200 bg-coral-50 text-coral-800">
+          <div className="font-medium">Couldn't load community posts.</div>
+          <p className="text-sm mt-1 text-coral-700">
+            {error.message || 'Something went wrong. Try again in a moment.'}
+          </p>
+          <button
+            type="button"
+            onClick={() => mutate()}
+            className="btn-ghost text-sm mt-3"
+          >
+            Try again
+          </button>
+        </div>
       ) : posts.length === 0 ? (
-        <div className="card text-center py-12 text-sage-500">No posts yet.</div>
+        <div className="card text-center py-12 space-y-2">
+          <div className="text-4xl">🫂</div>
+          <p className="text-sage-700 font-medium">Be the first to post.</p>
+          <p className="text-sage-500 text-sm max-w-md mx-auto">
+            Share a question, a win, or a hard day. This is a safe space for
+            Indian parents to find each other.
+          </p>
+        </div>
       ) : (
         <div className="space-y-3">
           {posts.map((p) => (

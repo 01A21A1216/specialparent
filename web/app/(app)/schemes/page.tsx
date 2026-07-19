@@ -1,6 +1,7 @@
 'use client';
 
 import { useApi } from '../../../lib/swr';
+import { ApiState } from '../../../components/api-state';
 
 interface Scheme {
   id: string;
@@ -14,7 +15,7 @@ interface Scheme {
 }
 
 export default function SchemesPage() {
-  const { data, isLoading: loading } = useApi<Scheme[]>('/public/schemes');
+  const { data, isLoading: loading, error, mutate } = useApi<Scheme[]>('/public/schemes');
   const schemes = data ?? [];
 
   return (
@@ -26,9 +27,14 @@ export default function SchemesPage() {
         </p>
       </header>
 
-      {loading ? (
-        <div className="text-sage-500">Loading…</div>
-      ) : (
+      <ApiState
+        loading={loading}
+        error={error}
+        isEmpty={schemes.length === 0}
+        emptyTitle="No schemes listed yet."
+        emptyBody="Our team is still curating the current welfare programmes under the RPWD Act — check back soon."
+        onRetry={() => mutate()}
+      >
         <div className="grid lg:grid-cols-2 gap-4">
           {schemes.map((s) => (
             <article key={s.id} className="card">
@@ -59,7 +65,7 @@ export default function SchemesPage() {
             </article>
           ))}
         </div>
-      )}
+      </ApiState>
     </div>
   );
 }

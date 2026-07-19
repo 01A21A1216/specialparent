@@ -19,6 +19,7 @@ export interface AuthResult {
     role: 'PARENT' | 'THERAPIST' | 'DOCTOR' | 'TEACHER' | 'SPECIAL_EDUCATOR' | 'SCHOOL_ADMIN' | 'ADMIN';
     preferredLanguage: string;
     avatarUrl?: string | null;
+    emailVerifiedAt?: string | null;
   };
   accessToken: string;
   refreshToken: string;

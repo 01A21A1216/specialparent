@@ -30,6 +30,7 @@ export default function NotificationsPage() {
   const {
     data: items,
     isLoading: loading,
+    error,
     mutate,
   } = useApi<Notification[]>('/notifications');
   const [busy, setBusy] = useState<string | 'all' | null>(null);
@@ -94,7 +95,25 @@ export default function NotificationsPage() {
       </header>
 
       {loading ? (
-        <div className="text-sage-500">Loading…</div>
+        <div className="card animate-pulse space-y-3">
+          <div className="h-4 bg-sage-100 rounded w-1/3" />
+          <div className="h-3 bg-sage-100 rounded" />
+          <div className="h-3 bg-sage-100 rounded w-5/6" />
+        </div>
+      ) : error ? (
+        <div className="card border-coral-200 bg-coral-50 text-coral-800">
+          <div className="font-medium">Couldn't load notifications.</div>
+          <p className="text-sm mt-1 text-coral-700">
+            {error.message || 'Something went wrong. Try again in a moment.'}
+          </p>
+          <button
+            type="button"
+            onClick={() => mutate()}
+            className="btn-ghost text-sm mt-3"
+          >
+            Try again
+          </button>
+        </div>
       ) : (items ?? []).length === 0 ? (
         <div className="card text-center py-16">
           <div className="text-5xl mb-3">🌱</div>

@@ -58,6 +58,19 @@ export class RedisCacheService implements OnModuleInit, OnModuleDestroy {
     }
   }
 
+  // Lets /health tell operators whether the cache tier is up. Returns
+  // 'disabled' when REDIS_URL was never set, 'up' after a successful PING,
+  // 'down' otherwise. Never throws.
+  async probe(): Promise<'up' | 'down' | 'disabled'> {
+    if (!this.client) return 'disabled';
+    try {
+      const pong = await this.client.ping();
+      return pong === 'PONG' ? 'up' : 'down';
+    } catch {
+      return 'down';
+    }
+  }
+
   async get<T = unknown>(key: string): Promise<T | null> {
     if (!this.client || !this.ready) return null;
     try {

@@ -71,6 +71,12 @@ model User {
   invitesSent       ChildInvite[]  @relation("InvitesSent")
   invitesAccepted   ChildInvite[]  @relation("InvitesAccepted")
   behaviorEvents    BehaviorEvent[] @relation("BehaviorEventsLogged")
+  authTokens        AuthToken[]
+  threadsAsA        MessageThread[] @relation("ThreadParticipantA")
+  threadsAsB        MessageThread[] @relation("ThreadParticipantB")
+  messagesSent      Message[]       @relation("MessageSender")
+  iepApprovals      IepApproval[]   @relation("IepApprovals")
+  familyDocuments   FamilyDocument[] @relation("DocumentOwner")
 
   @@index([role])
 }
@@ -118,7 +124,18 @@ model Child {
   calmingStrategies   String[]        // what helps regulate: "weighted blanket", "counting"
   hobbies             String[]        // "drawing", "trains", "music"
   communicationType   String?         // "verbal", "AAC", "PECS"
-  schoolName          String?
+
+  // School: link to a shared School record (preferred) OR keep the legacy
+  // free-text field for children whose school hasn't been created yet.
+  schoolId            String?
+  school              School?         @relation(fields: [schoolId], references: [id], onDelete: SetNull)
+  schoolName          String?         // legacy fallback, still displayed if schoolId is null
+
+  // Sibling grouping — a nullable pointer to a SiblingGroup. Every child in
+  // the same group treats the others as siblings. Symmetric by construction.
+  siblingGroupId      String?
+  siblingGroup        SiblingGroup?   @relation(fields: [siblingGroupId], references: [id], onDelete: SetNull)
+
   emergencyContact    String?
   notes               String?
   createdAt           DateTime        @default(now())
@@ -133,8 +150,14 @@ model Child {
   diagnosticReports   DiagnosticReport[]
   invites             ChildInvite[]
   behaviorEvents      BehaviorEvent[]
+  ieps                Iep[]
+  messageThreads      MessageThread[] @relation("MessageThreadChild")
+  familyDocuments     FamilyDocument[] @relation("DocumentChild")
+  routineSteps        RoutineStep[]
 
   @@index([fullName])
+  @@index([schoolId])
+  @@index([siblingGroupId])
 }
 
 // ─── Care-team invites ─────────────────────────────────────
@@ -313,6 +336,10 @@ model TherapySession {
   status       SessionStatus  @default(SCHEDULED)
   notes        String?
   aiSummary    String?
+  // IEP goals this session worked on. Loosely referenced (no FK) — an IEP
+  // goal deletion won't cascade to strip references from historical sessions.
+  // Query with array contains: `where: { iepGoalIds: { has: goalId } }`.
+  iepGoalIds   String[]       @default([])
   createdAt    DateTime       @default(now())
   updatedAt    DateTime       @updatedAt
 
@@ -502,4 +529,298 @@ model GovernmentScheme {
   language        Language @default(EN)
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
+}
+
+// ─── IEP (Individualized Education Program) ────────────────────────────────
+// A living document that captures a child's present levels of performance,
+// annual goals, accommodations, related services (therapies), and review
+// history. In India this is usually built with the school's special educator
+// + the therapy team + the parent, and revisited every quarter.
+
+enum IepStatus {
+  DRAFT           // still being written
+  PENDING_REVIEW  // author submitted; awaiting signatures from care team
+  ACTIVE          // signed off and in effect
+  ARCHIVED        // superseded by a newer IEP or the school year ended
+}
+
+model Iep {
+  id             String     @id @default(cuid())
+  childId        String
+  child          Child      @relation(fields: [childId], references: [id], onDelete: Cascade)
+  schoolYear     String     // "2026-2027"
+  title          String?    // optional label, e.g. "Grade 3 IEP"
+  status         IepStatus  @default(DRAFT)
+  effectiveFrom  DateTime?
+  effectiveTo    DateTime?
+
+  presentLevels  String?    // free-form summary of current academic + functional level
+  strengths      String?
+  concerns       String?
+
+  // Simple string list — "extra time for tests", "seat near teacher".
+  accommodations String[]
+
+  // Richer array of related services: each item is
+  // { type: TherapyType, frequency: string, provider: string, setting: string }
+  services       Json[]     @default([])
+
+  createdById    String?
+  createdByName  String?    // snapshot in case the user is removed later
+
+  createdAt      DateTime   @default(now())
+  updatedAt      DateTime   @updatedAt
+
+  goals          IepGoal[]
+  reviews        IepReview[]
+  approvals      IepApproval[]
+
+  @@index([childId, status])
+  @@index([childId, schoolYear])
+}
+
+// A signature on an IEP. One row per (iep, user); a user unsigns by
+// deleting their row. Once every required signer (see IepService.canPublish)
+// has approved, the IEP auto-transitions PENDING_REVIEW → ACTIVE.
+
+model IepApproval {
+  id        String   @id @default(cuid())
+  iepId     String
+  iep       Iep      @relation(fields: [iepId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User     @relation("IepApprovals", fields: [userId], references: [id], onDelete: Cascade)
+  role      Role     // captured at time of signing (a role change later shouldn't invalidate history)
+  note      String?
+  signedAt  DateTime @default(now())
+  createdAt DateTime @default(now())
+
+  @@unique([iepId, userId])
+  @@index([iepId])
+}
+
+model IepGoal {
+  id                 String           @id @default(cuid())
+  iepId              String
+  iep                Iep              @relation(fields: [iepId], references: [id], onDelete: Cascade)
+  domain             MilestoneDomain
+  title              String
+  description        String?
+  measurableCriteria String?          // "reads 40 wpm from a grade-2 text with 90% accuracy"
+  targetDate         DateTime?
+  status             MilestoneStatus  @default(NOT_STARTED)
+  progress           Int              @default(0) // 0-100
+
+  // Lineage: when this goal was created via the "carry over" action from a
+  // previous year's IEP, this points back to the source goal so progress
+  // history stays traceable.
+  carriedOverFromId  String?
+  carriedOverFrom    IepGoal?         @relation("GoalCarryover", fields: [carriedOverFromId], references: [id], onDelete: SetNull)
+  carriedInto        IepGoal[]        @relation("GoalCarryover")
+
+  createdAt          DateTime         @default(now())
+  updatedAt          DateTime         @updatedAt
+
+  @@index([iepId])
+  @@index([carriedOverFromId])
+}
+
+// ─── Auth tokens (password reset + email verification) ────────────────────
+// Single table, single flow. Tokens are single-use: consumed = usedAt set,
+// and we always verify usedAt IS NULL + expiresAt > now() before honoring.
+
+enum AuthTokenType {
+  PASSWORD_RESET
+  EMAIL_VERIFICATION
+}
+
+model AuthToken {
+  id         String        @id @default(cuid())
+  userId     String
+  user       User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type       AuthTokenType
+  tokenHash  String        @unique // SHA-256 of the raw token; raw token never persisted
+  expiresAt  DateTime
+  usedAt     DateTime?
+  createdAt  DateTime      @default(now())
+
+  @@index([userId, type])
+}
+
+model IepReview {
+  id           String   @id @default(cuid())
+  iepId        String
+  iep          Iep      @relation(fields: [iepId], references: [id], onDelete: Cascade)
+  reviewDate   DateTime
+  notes        String?
+  participants String[] // list of names present at the review
+  createdAt    DateTime @default(now())
+
+  @@index([iepId, reviewDate])
+}
+
+// ─── Daily routine (per-child visual schedule) ────────────────────────────
+// Visual schedules are foundational scaffolding for autistic + ADHD kids:
+// each step of the day is a card with a picture, a time, and a category.
+// The child can be walked through them; parents can edit any time.
+//
+// timeOfDay is stored as a "HH:MM" string in 24h. Simpler than DateTime for
+// a schedule that repeats — no timezone drift, no date arithmetic.
+// daysOfWeek: 0-6 (Sun-Sat). Empty array means "every day".
+
+enum RoutineCategory {
+  SELF_CARE    // brush teeth, toilet, bath, hair
+  MEAL         // breakfast, lunch, dinner, snack
+  SCHOOL       // school time, homework
+  THERAPY      // therapy sessions
+  PLAY         // free play, outdoor, screen time
+  SLEEP        // nap, bedtime, wake up
+  LEARNING     // reading, practice
+  CHORE        // help around the house
+  OTHER
+}
+
+model RoutineStep {
+  id            String           @id @default(cuid())
+  childId       String
+  child         Child            @relation(fields: [childId], references: [id], onDelete: Cascade)
+  title         String
+  description   String?
+  icon          String           // emoji, e.g. "🪥"
+  category      RoutineCategory
+  timeOfDay     String           // "06:15" — HH:MM 24h
+  durationMins  Int?
+  daysOfWeek    Int[]            @default([]) // empty = every day
+  active        Boolean          @default(true)
+  createdAt     DateTime         @default(now())
+  updatedAt     DateTime         @updatedAt
+
+  @@index([childId, timeOfDay])
+  @@index([childId, active])
+}
+
+// ─── Family documents vault ────────────────────────────────────────────────
+// Where families keep the paperwork that travels with them everywhere:
+// UDID card, Niramaya card, disability certificate, medical letters,
+// school reports, IEP snapshots. Scoped to a user (owner) with an optional
+// childId when the document belongs to a specific child. Uses the shared
+// StorageService for the underlying file, so Cloudinary swap-in is free.
+
+enum FamilyDocumentType {
+  UDID              // Unique Disability ID card
+  DISABILITY_CERT   // government disability certificate
+  NIRAMAYA          // Niramaya insurance card / policy
+  MEDICAL_REPORT    // doctor letters, prescriptions
+  SCHOOL_REPORT     // report cards, progress reports
+  IEP_SNAPSHOT      // exported / printed IEP
+  IDENTITY          // Aadhaar (masked), PAN, passport of the child
+  OTHER
+}
+
+model FamilyDocument {
+  id            String              @id @default(cuid())
+  ownerId       String
+  owner         User                @relation("DocumentOwner", fields: [ownerId], references: [id], onDelete: Cascade)
+  childId       String?
+  child         Child?              @relation("DocumentChild", fields: [childId], references: [id], onDelete: SetNull)
+  type          FamilyDocumentType
+  title         String
+  notes         String?
+  fileName      String
+  filePath      String              // opaque StorageService path
+  fileSize      Int
+  mimeType      String
+  expiresAt     DateTime?           // e.g. UDID renewal date, insurance expiry — surfaced in reminders
+  createdAt     DateTime            @default(now())
+  updatedAt     DateTime            @updatedAt
+
+  @@index([ownerId, type])
+  @@index([childId, type])
+  @@index([ownerId, expiresAt])
+}
+
+// ─── School (first-class entity) ───────────────────────────────────────────
+// Multiple children can share the same school. Metadata lives here instead
+// of being duplicated as a free-text field on each Child row. The old
+// Child.schoolName remains as a fallback for children not yet linked.
+
+enum SchoolBoard {
+  CBSE
+  ICSE
+  STATE
+  IB
+  IGCSE
+  NIOS
+  OTHER
+}
+
+model School {
+  id             String       @id @default(cuid())
+  name           String
+  board          SchoolBoard  @default(OTHER)
+  city           String?
+  state          String?
+  address        String?
+  principalName  String?
+  contactEmail   String?
+  contactPhone   String?
+  website        String?
+  isInclusive    Boolean      @default(false) // has a resource room / special educator
+  notes          String?
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  children       Child[]
+
+  @@index([name])
+  @@index([city, state])
+}
+
+// ─── Sibling groups ────────────────────────────────────────────────────────
+// A single SiblingGroup row groups two or more Children. Each Child.siblingGroupId
+// points to the same group. Membership is symmetric by construction — adding
+// child B to child A's group makes them siblings both ways.
+
+model SiblingGroup {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+
+  children  Child[]
+}
+
+// ─── Messaging (parent ↔ therapist) ────────────────────────────────────────
+// 1:1 threads today. Every thread has exactly two participants; participantA
+// is always the user with the lexicographically smaller id, which gives us a
+// unique index so opening a thread with the same person twice returns the
+// existing one. An optional childId scopes the thread to a specific child.
+
+model MessageThread {
+  id             String    @id @default(cuid())
+  participantAId String
+  participantA   User      @relation("ThreadParticipantA", fields: [participantAId], references: [id], onDelete: Cascade)
+  participantBId String
+  participantB   User      @relation("ThreadParticipantB", fields: [participantBId], references: [id], onDelete: Cascade)
+  childId        String?
+  child          Child?    @relation("MessageThreadChild", fields: [childId], references: [id], onDelete: SetNull)
+  lastMessageAt  DateTime  @default(now())
+  createdAt      DateTime  @default(now())
+
+  messages       Message[]
+
+  @@unique([participantAId, participantBId, childId])
+  @@index([participantAId, lastMessageAt])
+  @@index([participantBId, lastMessageAt])
+}
+
+model Message {
+  id        String        @id @default(cuid())
+  threadId  String
+  thread    MessageThread @relation(fields: [threadId], references: [id], onDelete: Cascade)
+  senderId  String
+  sender    User          @relation("MessageSender", fields: [senderId], references: [id], onDelete: Cascade)
+  body      String
+  readAt    DateTime?     // set when the recipient loads the thread
+  createdAt DateTime      @default(now())
+
+  @@index([threadId, createdAt])
+  @@index([threadId, readAt])
 }

@@ -13,6 +13,15 @@ export interface ChildDetail {
   hobbies: string[];
   communicationType?: string | null;
   schoolName?: string | null;
+  schoolId?: string | null;
+  school?: {
+    id: string;
+    name: string;
+    board?: string | null;
+    city?: string | null;
+    state?: string | null;
+    isInclusive?: boolean;
+  } | null;
   emergencyContact?: string | null;
   notes?: string | null;
   caregivers: Array<{

@@ -1,15 +1,19 @@
 'use client';
 
+import Link from 'next/link';
 import { useEffect, useMemo, useState } from 'react';
 import { cn } from '../../../lib/utils';
 
-type Symbol = { id: string; label: string; emoji: string; phrase?: string };
+// AacSymbol (not Symbol) — the built-in `Symbol` is a global, and shadowing
+// it here confuses SWC's JSX-vs-generics disambiguator (`<AacSymbol[]>` inside
+// a call is ambiguous with the JSX opening tag `<Symbol`).
+type AacSymbol = { id: string; label: string; emoji: string; phrase?: string };
 type Category = {
   id: string;
   label: string;
   emoji: string;
   tone: 'sage' | 'coral' | 'mist' | 'lavender';
-  symbols: Symbol[];
+  symbols: AacSymbol[];
 };
 
 // PECS-style symbol set. Phrases are the full sentence spoken aloud.
@@ -128,7 +132,7 @@ const TONE_ACTIVE: Record<Category['tone'], string> = {
 
 export default function AacBoard() {
   const [activeCat, setActiveCat] = useState<string>(CATEGORIES[0].id);
-  const [sentence, setSentence] = useState<Symbol[]>([]);
+  const [sentence, setSentence] = useState<AacSymbol[]>([]);
   const [supportsSpeech, setSupportsSpeech] = useState<boolean>(false);
 
   useEffect(() => {
@@ -151,7 +155,7 @@ export default function AacBoard() {
     window.speechSynthesis.speak(utter);
   }
 
-  function tap(s: Symbol) {
+  function tap(s: AacSymbol) {
     setSentence((prev) => [...prev, s]);
     speak(s.phrase || s.label);
   }
@@ -173,22 +177,31 @@ export default function AacBoard() {
 
   return (
     <div className="space-y-8">
-      <header>
-        <p className="text-sage-500 text-sm uppercase tracking-wider">AAC</p>
-        <h1 className="font-display text-4xl sm:text-5xl text-sage-900 mt-2">
-          Communication board
-        </h1>
-        <p className="mt-3 text-sage-600 max-w-2xl leading-relaxed">
-          A simple picture-based way to communicate. Tap a symbol to speak it aloud,
-          string symbols together to build a sentence. Designed for quick use at home,
-          in school, or on the go.
-        </p>
-        {!supportsSpeech && (
-          <p className="mt-3 text-sm text-coral-700 bg-coral-50 border border-coral-200 rounded-xl px-4 py-2 inline-block">
-            Voice output isn't available in this browser — symbols still work as a board.
+      <header className="flex items-start justify-between gap-4 flex-wrap">
+        <div>
+          <p className="text-sage-500 text-sm uppercase tracking-wider">AAC</p>
+          <h1 className="font-display text-4xl sm:text-5xl text-sage-900 mt-2">
+            Communication board
+          </h1>
+          <p className="mt-3 text-sage-600 max-w-2xl leading-relaxed">
+            A simple picture-based way to communicate. Tap a symbol to speak it aloud,
+            string symbols together to build a sentence. Designed for quick use at home,
+            in school, or on the go.
           </p>
-        )}
+        </div>
+        <Link
+          href="/aac/fullscreen"
+          className="btn-primary text-sm whitespace-nowrap"
+          title="Open a distraction-free, no-sidebar view — best for handing the device to a child"
+        >
+          ⛶ Full-screen mode
+        </Link>
       </header>
+      {!supportsSpeech && (
+        <p className="text-sm text-coral-700 bg-coral-50 border border-coral-200 rounded-xl px-4 py-2 inline-block">
+          Voice output isn't available in this browser — symbols still work as a board.
+        </p>
+      )}
 
       {/* Sentence strip */}
       <section
