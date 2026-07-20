@@ -44,6 +44,11 @@ export class CreateMoodDto {
   @IsOptional()
   @IsDateString()
   loggedAt?: string;
+
+  @ApiProperty({ required: false, description: 'Attached voice note (POST /voice-notes)' })
+  @IsOptional()
+  @IsString()
+  voiceNoteId?: string;
 }
 
 @Injectable()
@@ -60,6 +65,7 @@ export class MoodsService {
         childId: dto.childId,
         mood: dto.mood,
         note: dto.note,
+        voiceNoteId: dto.voiceNoteId,
         loggedAt: dto.loggedAt ? new Date(dto.loggedAt) : new Date(),
       },
     });

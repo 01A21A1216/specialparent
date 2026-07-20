@@ -84,6 +84,10 @@ export class UpdateSessionDto {
   @ArrayMaxSize(20)
   @IsString({ each: true })
   iepGoalIds?: string[];
+
+  @IsOptional()
+  @IsString()
+  voiceNoteId?: string;
 }
 
 // ─── Service ──────────────────────────────────────────────

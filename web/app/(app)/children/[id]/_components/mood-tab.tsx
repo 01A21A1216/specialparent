@@ -3,6 +3,8 @@
 import { useState } from 'react';
 import { api } from '../../../../../lib/api';
 import { cn, formatDateTime } from '../../../../../lib/utils';
+import { VoiceNoteRecorder } from '../../../../../components/voice-note-recorder';
+import { VoiceNotePlayer } from '../../../../../components/voice-note-player';
 import { ChildDetail } from './types';
 
 const MOOD_OPTIONS = [
@@ -32,6 +34,8 @@ export function MoodTab({
 }) {
   const [selected, setSelected] = useState<string | null>(null);
   const [note, setNote] = useState('');
+  const [voiceNoteId, setVoiceNoteId] = useState<string | null>(null);
+  const [showRecorder, setShowRecorder] = useState(false);
   const [saving, setSaving] = useState(false);
   const [err, setErr] = useState<string | null>(null);
 
@@ -46,10 +50,17 @@ export function MoodTab({
     try {
       await api('/moods', {
         method: 'POST',
-        body: { childId, mood: selected, note: note || undefined },
+        body: {
+          childId,
+          mood: selected,
+          note: note || undefined,
+          voiceNoteId: voiceNoteId || undefined,
+        },
       });
       setSelected(null);
       setNote('');
+      setVoiceNoteId(null);
+      setShowRecorder(false);
       await onChange();
     } catch (e: any) {
       setErr(e?.message || 'Could not save mood.');
@@ -97,6 +108,47 @@ export function MoodTab({
           placeholder="A note for future-you (optional) — what triggered the mood, what helped, etc."
           className="input"
         />
+
+        {voiceNoteId ? (
+          <div className="rounded-2xl border border-sage-200 bg-sage-50 p-3 flex items-center justify-between gap-2 flex-wrap">
+            <div className="text-sm text-sage-800">
+              🎙 Voice note attached
+              {note && <span className="text-sage-500"> · transcript in the note above</span>}
+            </div>
+            <button
+              type="button"
+              onClick={() => {
+                setVoiceNoteId(null);
+                // Don't wipe the text note — the transcript is now the user's
+                // to edit. If they wanted a clean slate they'd clear it.
+              }}
+              className="chip text-xs bg-cream-200 text-sage-700 hover:bg-cream-300"
+            >
+              × Detach
+            </button>
+          </div>
+        ) : showRecorder ? (
+          <VoiceNoteRecorder
+            onSaved={(vn) => {
+              setVoiceNoteId(vn.id);
+              // Prefill the note field with the transcript — the user can
+              // edit before saving the mood entry. If Whisper wasn't
+              // configured, transcript is null and we leave the field alone.
+              if (vn.transcript && !note.trim()) setNote(vn.transcript);
+              setShowRecorder(false);
+            }}
+            onCancel={() => setShowRecorder(false)}
+          />
+        ) : (
+          <button
+            type="button"
+            onClick={() => setShowRecorder(true)}
+            className="chip bg-cream-100 text-sage-700 hover:bg-sage-100 w-fit text-xs"
+          >
+            🎙 Add a voice note instead
+          </button>
+        )}
+
         {err && <p className="text-sm text-coral-700">{err}</p>}
         <button type="submit" disabled={saving} className="btn-primary w-full sm:w-auto">
           {saving ? 'Saving…' : 'Log mood'}
@@ -118,6 +170,11 @@ export function MoodTab({
                 </div>
                 <div className="text-xs text-sage-500">{formatDateTime(m.loggedAt)}</div>
                 {m.note && <p className="text-sm text-sage-600 italic mt-1">"{m.note}"</p>}
+                {m.voiceNoteId && (
+                  <div className="mt-2">
+                    <VoiceNotePlayer voiceNoteId={m.voiceNoteId} />
+                  </div>
+                )}
               </div>
             </div>
           ))}

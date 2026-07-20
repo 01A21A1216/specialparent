@@ -60,6 +60,7 @@ export interface ChildDetail {
     mood: string;
     loggedAt: string;
     note?: string | null;
+    voiceNoteId?: string | null;
   }>;
   diagnosticReports: Array<{
     id: string;

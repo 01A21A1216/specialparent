@@ -77,6 +77,7 @@ model User {
   messagesSent      Message[]       @relation("MessageSender")
   iepApprovals      IepApproval[]   @relation("IepApprovals")
   familyDocuments   FamilyDocument[] @relation("DocumentOwner")
+  voiceNotes        VoiceNote[]
 
   @@index([role])
 }
@@ -261,13 +262,15 @@ enum Mood {
 }
 
 model MoodEntry {
-  id        String   @id @default(cuid())
-  childId   String
-  child     Child    @relation(fields: [childId], references: [id], onDelete: Cascade)
-  mood      Mood
-  note      String?
-  loggedAt  DateTime @default(now())
-  createdAt DateTime @default(now())
+  id           String     @id @default(cuid())
+  childId      String
+  child        Child      @relation(fields: [childId], references: [id], onDelete: Cascade)
+  mood         Mood
+  note         String?
+  voiceNoteId  String?
+  voiceNote    VoiceNote? @relation(fields: [voiceNoteId], references: [id], onDelete: SetNull)
+  loggedAt     DateTime   @default(now())
+  createdAt    DateTime   @default(now())
 
   @@index([childId, loggedAt])
 }
@@ -340,6 +343,8 @@ model TherapySession {
   // goal deletion won't cascade to strip references from historical sessions.
   // Query with array contains: `where: { iepGoalIds: { has: goalId } }`.
   iepGoalIds   String[]       @default([])
+  voiceNoteId  String?
+  voiceNote    VoiceNote?     @relation(fields: [voiceNoteId], references: [id], onDelete: SetNull)
   createdAt    DateTime       @default(now())
   updatedAt    DateTime       @updatedAt
 
@@ -656,6 +661,30 @@ model IepReview {
   createdAt    DateTime @default(now())
 
   @@index([iepId, reviewDate])
+}
+
+// ─── Voice notes ───────────────────────────────────────────────────────────
+// Short audio clips a parent or therapist records via MediaRecorder, then
+// (optionally) auto-transcribed by Whisper. Multiple records can link to
+// the same VoiceNote — a mood entry uses one to describe the day, a
+// therapy session uses one to capture verbal notes. Ownership tracked by
+// `userId`; access checked at the streaming endpoint.
+
+model VoiceNote {
+  id           String   @id @default(cuid())
+  userId       String
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  storagePath  String            // opaque StorageService path
+  fileSize     Int
+  mimeType     String
+  durationSec  Int?
+  transcript   String?
+  createdAt    DateTime @default(now())
+
+  moodEntries       MoodEntry[]
+  therapySessions   TherapySession[]
+
+  @@index([userId, createdAt])
 }
 
 // ─── Daily routine (per-child visual schedule) ────────────────────────────
