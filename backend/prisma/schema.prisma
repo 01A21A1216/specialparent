@@ -520,6 +520,121 @@ model Resource {
   @@index([category, language])
 }
 
+// ─── Family wellness directory ─────────────────────────────────────────────
+// Curated third-party offerings that support the whole family — yoga,
+// music, art, painting, parent counselling, parent training. Directory-
+// style records (title + provider + how to reach them) rather than a
+// booking system — parents contact the provider directly. Rows are
+// authored by admins via the CMS; the public API is read-only.
+
+enum WellnessCategory {
+  YOGA
+  MUSIC
+  ART
+  PAINTING
+  PARENT_COUNSELLING
+  PARENT_TRAINING
+  MEDITATION
+  OTHER
+}
+
+enum WellnessAudience {
+  CHILD      // for the child, often adapted for neurodivergent kids
+  PARENT     // for the parent — burnout, self-care, training
+  FAMILY     // parent + child together
+}
+
+enum WellnessFormat {
+  ONLINE
+  IN_PERSON
+  HYBRID
+}
+
+model WellnessOffering {
+  id            String           @id @default(cuid())
+  category      WellnessCategory
+  audience      WellnessAudience
+  format        WellnessFormat
+  title         String
+  provider      String           // "The Yoga Institute — Kids Program"
+  description   String
+  city          String?          // null when format is ONLINE
+  languages     String[]         @default([])
+  costHint      String?          // "Free" / "₹500/session" / "₹5,000/month"
+  scheduleHint  String?          // "Sat 10am / Wed 5pm"
+  contactUrl    String?          // https:// preferred
+  contactPhone  String?
+  notes         String?          // "First class free", accessibility notes, etc.
+  published     Boolean          @default(true)
+  createdAt     DateTime         @default(now())
+  updatedAt     DateTime         @updatedAt
+
+  @@index([category, audience, published])
+  @@index([city, published])
+}
+
+// ─── Treatments research library ──────────────────────────────────────────
+// A curated, evidence-labelled library of treatments and protocols families
+// encounter — modern medicine, Ayurveda, Homeopathy, biomedical, cellular
+// (incl. stem cell), diet-based, mind-body. Every row carries an EvidenceLevel
+// so we never present unproven or harmful therapies as "just another option".
+// Editorial standard: neutral tone, references to primary sources, India
+// regulatory context (CDSCO, ICMR, AYUSH). NOT a booking directory.
+
+enum TreatmentSystem {
+  ALLOPATHIC   // Modern / Western / "English medicine"
+  AYURVEDA
+  HOMEOPATHY
+  NUTRITIONAL  // GFCF, ketogenic, supplements, omega-3
+  BIOMEDICAL   // Chelation, HBOT, B12 injections
+  CELLULAR     // Stem cell, exosome
+  MIND_BODY    // Sensory integration, neurofeedback, behavioural therapies
+  OTHER
+}
+
+// Editorial rating of the underlying evidence. This is the single most
+// important field — the UI treats NOT_RECOMMENDED / EXPERIMENTAL as loud
+// warnings, not just chips.
+enum EvidenceLevel {
+  STANDARD_OF_CARE   // Guideline-backed, first-line
+  EMERGING           // Growing evidence, promising but not established
+  LIMITED            // Some studies, weak/mixed evidence
+  EXPERIMENTAL       // Research phase only; only pursue in registered trials
+  NOT_RECOMMENDED    // Evidence against, or harm risk > benefit
+}
+
+enum TreatmentFocus {
+  CORE_SYMPTOMS   // Attempts to change core autism features
+  COMORBIDITY     // ADHD, epilepsy, GI, anxiety, sleep
+  SYMPTOM_RELIEF  // Irritability, aggression, sleep-onset
+  SUPPORT         // General wellbeing / caregiver-oriented
+}
+
+model TreatmentResearch {
+  id                   String           @id @default(cuid())
+  system               TreatmentSystem
+  focus                TreatmentFocus
+  evidenceLevel        EvidenceLevel
+  // Titles are curated and human-authored; unique so re-seeds
+  // (nest --watch restarts, admin re-runs) are idempotent.
+  title                String           @unique
+  alsoKnownAs          String?          // brand names / synonyms
+  summary              String           // 2–3 sentences, plain English
+  whatItIs             String
+  whatResearchShows    String
+  considerations       String           // side effects, monitoring, cautions
+  indiaContext         String?          // CDSCO/ICMR/AYUSH status, cost/access
+  references           String[]         @default([])
+  prescriptionRequired Boolean          @default(false)
+  published            Boolean          @default(true)
+  createdAt            DateTime         @default(now())
+  updatedAt            DateTime         @updatedAt
+
+  @@index([system, published])
+  @@index([evidenceLevel, published])
+  @@index([focus, published])
+}
+
 // ─── Government Schemes (lightweight scaffold) ─────────────────────────────
 
 model GovernmentScheme {

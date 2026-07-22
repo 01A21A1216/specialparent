@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { useAuth } from '../components/auth-provider';
 
 export default function HomePage() {
-  const { user } = useAuth();
+  const { user, loading } = useAuth();
 
   return (
     <div className="min-h-screen bg-cream-50 text-sage-900 overflow-x-hidden">
@@ -33,8 +33,16 @@ export default function HomePage() {
             <Link href="/platform" className="hover:text-sage-900 min-h-fit py-1">Platform</Link>
             <Link href="/security" className="hover:text-sage-900 min-h-fit py-1">Security</Link>
           </nav>
-          <div className="flex items-center gap-2">
-            {user ? (
+          <div className="flex items-center gap-2 min-h-[48px]">
+            {loading ? (
+              // Avoids a Sign-in→Dashboard flicker for signed-in visitors
+              // while /auth/me is in-flight. Keep the same footprint so
+              // layout doesn't shift when the real CTAs land.
+              <div
+                aria-hidden
+                className="w-40 h-11 rounded-full bg-sage-100/40 animate-pulse"
+              />
+            ) : user ? (
               <Link href="/dashboard" className="btn-primary">Dashboard →</Link>
             ) : (
               <>
@@ -70,8 +78,16 @@ export default function HomePage() {
             For autism, ADHD, speech delays, learning differences, and more.
           </p>
           <div className="mt-9 flex flex-col sm:flex-row gap-3">
-            <Link href={user ? '/dashboard' : '/signup'} className="btn-primary text-lg px-8">
-              {user ? 'Open my dashboard' : 'Create a free account'}
+            {/* While /auth/me is in-flight, render the anonymous CTA so
+                the primary action is never a flash of the wrong link.
+                For a signed-in user it flips to "Open my dashboard" once
+                loading finishes — the visible flash then is *toward* the
+                more useful action, not away from it. */}
+            <Link
+              href={!loading && user ? '/dashboard' : '/signup'}
+              className="btn-primary text-lg px-8"
+            >
+              {!loading && user ? 'Open my dashboard' : 'Create a free account'}
             </Link>
             <Link href="/login" className="btn-secondary text-lg px-8">
               Try the demo

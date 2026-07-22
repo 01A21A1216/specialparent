@@ -9,10 +9,13 @@ import { api } from '../lib/api';
 import { useApi } from '../lib/swr';
 import { cn, initials } from '../lib/utils';
 import {
+  BeakerIcon,
   BellIcon,
   BookIcon,
   CalendarIcon,
+  ChartIcon,
   ChatIcon,
+  LeafIcon,
   ChevronDoubleLeftIcon,
   CloseIcon,
   EmergencyIcon,
@@ -38,7 +41,7 @@ type NavItem = {
 const NAV_PARENT: NavItem[] = [
   { href: '/dashboard', label: 'Dashboard', icon: HomeIcon },
   { href: '/children', label: 'Children', icon: HeartIcon },
-  { href: '/insights', label: 'Insights', icon: SparkleIcon },
+  { href: '/insights', label: 'Insights', icon: ChartIcon },
   { href: '/therapy', label: 'Therapy', icon: SparkleIcon },
   { href: '/appointments', label: 'Appointments', icon: CalendarIcon },
   { href: '/messages', label: 'Messages', icon: ChatIcon },
@@ -46,6 +49,8 @@ const NAV_PARENT: NavItem[] = [
   { href: '/notifications', label: 'Notifications', icon: BellIcon },
   { href: '/aac', label: 'Communication', icon: SpeechIcon },
   { href: '/community', label: 'Community', icon: ChatIcon },
+  { href: '/wellness', label: 'Wellness', icon: LeafIcon },
+  { href: '/research', label: 'Treatments', icon: BeakerIcon },
   { href: '/resources', label: 'Resources', icon: BookIcon },
   { href: '/schemes', label: 'Govt Schemes', icon: ShieldIcon },
   { href: '/ai', label: 'AI Guide', icon: WandIcon },
@@ -60,6 +65,8 @@ const NAV_THERAPIST: NavItem[] = [
   { href: '/messages', label: 'Messages', icon: ChatIcon },
   { href: '/notifications', label: 'Notifications', icon: BellIcon },
   { href: '/community', label: 'Community', icon: ChatIcon },
+  { href: '/wellness', label: 'Wellness', icon: LeafIcon },
+  { href: '/research', label: 'Treatments', icon: BeakerIcon },
   { href: '/resources', label: 'Resources', icon: BookIcon },
   { href: '/ai', label: 'AI Guide', icon: WandIcon },
 ];

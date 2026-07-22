@@ -30,6 +30,8 @@ import { DocumentsModule } from './documents/documents.module';
 import { InsightsModule } from './insights/insights.module';
 import { RoutineModule } from './routine/routine.module';
 import { VoiceNotesModule } from './voice-notes/voice-notes.module';
+import { WellnessModule } from './wellness/wellness.module';
+import { TreatmentResearchModule } from './research/research.module';
 import { HealthController } from './common/health.controller';
 import { AuditInterceptor } from './common/audit.interceptor';
 import { CacheModule } from './common/cache/cache.module';
@@ -79,6 +81,8 @@ import { validateEnv } from './common/env.validation';
     InsightsModule,
     RoutineModule,
     VoiceNotesModule,
+    WellnessModule,
+    TreatmentResearchModule,
   ],
   controllers: [HealthController],
   providers: [
