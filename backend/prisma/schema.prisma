@@ -96,18 +96,107 @@ model RefreshToken {
   @@index([userId])
 }
 
+// A registered practitioner's public-facing profile. Users with role
+// THERAPIST / DOCTOR / SPECIAL_EDUCATOR complete this to appear in the
+// public /therapists directory. Every profile is reviewed by a platform
+// admin before it is visible — education, certifications, and LinkedIn
+// are the primary signals the admin checks against.
+enum VerificationStatus {
+  DRAFT           // therapist is still filling it in
+  PENDING_REVIEW  // submitted; sitting in the admin queue
+  VERIFIED        // admin approved; listed publicly
+  REJECTED        // admin rejected with a note; therapist can revise + resubmit
+  SUSPENDED       // previously verified but removed from the directory (complaint, expired credential, etc.)
+}
+
+enum ServiceMode {
+  ONLINE
+  IN_PERSON
+  HYBRID
+}
+
 model TherapistProfile {
-  id              String    @id @default(cuid())
-  userId          String    @unique
-  user            User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  specialization  String    // e.g. "ABA", "Speech", "OT"
-  qualifications  String?
-  yearsExperience Int       @default(0)
-  bio             String?
-  hourlyRate      Int?      // INR paise
-  verifiedAt      DateTime?
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @updatedAt
+  id                    String              @id @default(cuid())
+  userId                String              @unique
+  user                  User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // Practice basics
+  specialization        String              // primary headline specialization ("Speech-Language Pathology")
+  specializations       String[]            @default([])  // full list including primary; enables multi-filter
+  qualifications        String?             // freeform summary (also captured structurally in TherapistEducation)
+  yearsExperience       Int                 @default(0)
+  bio                   String?
+  hourlyRate            Int?                // INR paise
+  languages             String[]            @default([])  // ISO-ish tags: EN, HI, TA, TE, KN, ML, MR, BN, GU
+  serviceModes          ServiceMode[]       @default([])
+  city                  String?
+  state                 String?             // Indian state
+  country               String              @default("India")
+  photoUrl              String?             // profile photo
+  linkedinUrl           String?
+  websiteUrl            String?
+  availability          String?             // freeform: "Mon–Fri 5–8pm; Sat 10–2"
+  acceptingNewClients   Boolean             @default(true)
+  ageGroups             String[]            @default([])  // "0-3", "4-7", "8-12", "13-18", "18+"
+
+  // Verification workflow — the trust surface of the whole feature.
+  verificationStatus    VerificationStatus  @default(DRAFT)
+  submittedAt           DateTime?
+  verifiedAt            DateTime?           // set when status → VERIFIED
+  verifiedById          String?             // admin who acted
+  rejectionReason       String?             // shown to the therapist on their own profile
+  adminNotes            String?             // internal-only notes for the next reviewer
+
+  educations            TherapistEducation[]
+  certifications        TherapistCertification[]
+
+  createdAt             DateTime            @default(now())
+  updatedAt             DateTime            @updatedAt
+
+  @@index([verificationStatus])
+  @@index([city, verificationStatus])
+}
+
+// Structured education record. The admin cross-checks each row against
+// LinkedIn + any uploaded certificate before marking the parent profile
+// VERIFIED. Rows can be edited by the therapist any time; a substantive
+// change should bump the profile back to PENDING_REVIEW (enforced in the
+// service layer).
+model TherapistEducation {
+  id                  String            @id @default(cuid())
+  therapistProfileId  String
+  therapistProfile    TherapistProfile  @relation(fields: [therapistProfileId], references: [id], onDelete: Cascade)
+  degree              String            // "MSc", "BASLP", "MOT"
+  institution         String            // "AIISH Mysuru", "NIEPMD Chennai"
+  fieldOfStudy        String?           // "Speech-Language Pathology"
+  yearCompleted       Int?
+  notes               String?
+  createdAt           DateTime          @default(now())
+  updatedAt           DateTime          @updatedAt
+
+  @@index([therapistProfileId])
+}
+
+// Structured certification record with optional file upload (goes through
+// StorageService like every other file). "RCI registration" is the most
+// important one for Indian practitioners — the admin verifies the number
+// against the RCI public register.
+model TherapistCertification {
+  id                    String            @id @default(cuid())
+  therapistProfileId    String
+  therapistProfile      TherapistProfile  @relation(fields: [therapistProfileId], references: [id], onDelete: Cascade)
+  name                  String            // "RCI Registration", "BCBA", "Sensory Integration certification"
+  issuingOrganization   String            // "Rehabilitation Council of India"
+  credentialId          String?           // registration number
+  issueDate             DateTime?
+  expiryDate            DateTime?         // for renewable creds; drives suspension reminders
+  credentialUrl         String?           // link to the issuer's public register entry
+  fileName              String?           // uploaded certificate PDF
+  filePath              String?           // storage-backend opaque path
+  createdAt             DateTime          @default(now())
+  updatedAt             DateTime          @updatedAt
+
+  @@index([therapistProfileId])
 }
 
 // ─── Child & Care ──────────────────────────────────────────────────────────

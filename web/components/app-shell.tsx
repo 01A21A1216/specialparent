@@ -49,6 +49,7 @@ const NAV_PARENT: NavItem[] = [
   { href: '/notifications', label: 'Notifications', icon: BellIcon },
   { href: '/aac', label: 'Communication', icon: SpeechIcon },
   { href: '/community', label: 'Community', icon: ChatIcon },
+  { href: '/therapists', label: 'Find therapists', icon: UsersIcon },
   { href: '/wellness', label: 'Wellness', icon: LeafIcon },
   { href: '/research', label: 'Treatments', icon: BeakerIcon },
   { href: '/resources', label: 'Resources', icon: BookIcon },
@@ -59,7 +60,8 @@ const NAV_PARENT: NavItem[] = [
 
 const NAV_THERAPIST: NavItem[] = [
   { href: '/dashboard', label: 'Dashboard', icon: HomeIcon },
-  { href: '/children', label: 'My caseload', icon: HeartIcon },
+  { href: '/therapist/profile', label: 'My profile', icon: HeartIcon },
+  { href: '/children', label: 'My caseload', icon: UsersIcon },
   { href: '/therapy', label: 'Sessions', icon: SparkleIcon },
   { href: '/appointments', label: 'Appointments', icon: CalendarIcon },
   { href: '/messages', label: 'Messages', icon: ChatIcon },
@@ -82,6 +84,7 @@ const NAV_SCHOOL: NavItem[] = [
 const NAV_ADMIN: NavItem[] = [
   { href: '/admin', label: 'Overview', icon: HomeIcon },
   { href: '/admin/users', label: 'Users', icon: UsersIcon },
+  { href: '/admin/therapists', label: 'Therapists', icon: HeartIcon },
   { href: '/admin/moderation', label: 'Moderation', icon: FlagIcon },
   { href: '/admin/cms', label: 'CMS', icon: BookIcon },
   { href: '/community', label: 'Community', icon: ChatIcon },

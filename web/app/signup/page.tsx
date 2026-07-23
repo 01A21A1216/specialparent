@@ -23,7 +23,11 @@ function SignupForm() {
   const searchParams = useSearchParams();
   const { signup } = useAuth();
 
-  const nextPath = searchParams?.get('next') ?? '/dashboard';
+  // Practitioner roles have a dedicated onboarding flow (credentials +
+  // admin review) before they can be discovered by parents. Everyone else
+  // lands on their role-aware dashboard.
+  const PRACTITIONER_ROLES: SignupRole[] = ['THERAPIST', 'DOCTOR', 'SPECIAL_EDUCATOR'];
+  const explicitNext = searchParams?.get('next');
   const prefilledEmail = searchParams?.get('email') ?? '';
   const prefilledRoleRaw = searchParams?.get('role');
   const prefilledRole =
@@ -44,7 +48,10 @@ function SignupForm() {
     setError(null);
     try {
       await signup({ email: email.trim().toLowerCase(), fullName, password, role });
-      router.replace(nextPath);
+      const dest =
+        explicitNext ??
+        (PRACTITIONER_ROLES.includes(role) ? '/therapist/onboarding' : '/dashboard');
+      router.replace(dest);
     } catch (err: any) {
       setError(err?.message ?? 'Sign-up failed');
     } finally {

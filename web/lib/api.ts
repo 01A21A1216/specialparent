@@ -149,9 +149,11 @@ export async function api<T = unknown>(path: string, opts: ApiOptions = {}): Pro
     throw new ApiError(res.status, msg, payload);
   }
 
-  // 204
+  // 204 or empty body (Nest returns nothing when a controller returns null)
   if (res.status === 204) return undefined as T;
-  return (await res.json()) as T;
+  const text = await res.text();
+  if (text.length === 0) return null as T;
+  return JSON.parse(text) as T;
 }
 
 // Authed binary download. Returns the raw Blob so callers can view or save it.

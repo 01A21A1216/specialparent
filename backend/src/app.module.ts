@@ -32,6 +32,7 @@ import { RoutineModule } from './routine/routine.module';
 import { VoiceNotesModule } from './voice-notes/voice-notes.module';
 import { WellnessModule } from './wellness/wellness.module';
 import { TreatmentResearchModule } from './research/research.module';
+import { TherapistDirectoryModule } from './therapist-directory/therapist-directory.module';
 import { HealthController } from './common/health.controller';
 import { AuditInterceptor } from './common/audit.interceptor';
 import { CacheModule } from './common/cache/cache.module';
@@ -83,6 +84,7 @@ import { validateEnv } from './common/env.validation';
     VoiceNotesModule,
     WellnessModule,
     TreatmentResearchModule,
+    TherapistDirectoryModule,
   ],
   controllers: [HealthController],
   providers: [
