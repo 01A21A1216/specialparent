@@ -13,7 +13,7 @@ function LoginForm() {
   const next = params.get('next') ?? '/dashboard';
   const { login } = useAuth();
 
-  const [email, setEmail] = useState('parent@specialparent.in');
+  const [email, setEmail] = useState('parent@specialparents.in');
   const [password, setPassword] = useState('Demo1234!');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -35,7 +35,7 @@ function LoginForm() {
   return (
     <AuthLayout
       title="Welcome back."
-      subtitle="Sign in to your SpecialParent.in account."
+      subtitle="Sign in to your SpecialParents.in account."
     >
       <form onSubmit={onSubmit} className="space-y-5">
         {error && (
@@ -91,11 +91,11 @@ function LoginForm() {
           <strong className="text-sage-900">Demo accounts</strong> (password{' '}
           <code className="bg-white px-1.5 py-0.5 rounded text-xs">Demo1234!</code>):
           <ul className="mt-2 space-y-1">
-            <li>· parent@specialparent.in</li>
-            <li>· therapist@specialparent.in</li>
-            <li>· teacher@specialparent.in</li>
-            <li>· school@specialparent.in</li>
-            <li>· admin@specialparent.in</li>
+            <li>· parent@specialparents.in</li>
+            <li>· therapist@specialparents.in</li>
+            <li>· teacher@specialparents.in</li>
+            <li>· school@specialparents.in</li>
+            <li>· admin@specialparents.in</li>
           </ul>
         </div>
 
@@ -116,7 +116,7 @@ export default function LoginPage() {
       fallback={
         <AuthPageFallback
           title="Welcome back."
-          subtitle="Sign in to your SpecialParent.in account."
+          subtitle="Sign in to your SpecialParents.in account."
         />
       }
     >

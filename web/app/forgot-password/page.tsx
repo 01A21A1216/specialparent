@@ -52,7 +52,7 @@ export default function ForgotPasswordPage() {
   return (
     <AuthLayout
       title="Reset your password."
-      subtitle="Enter the email on your SpecialParent.in account and we'll send you a link."
+      subtitle="Enter the email on your SpecialParents.in account and we'll send you a link."
     >
       <form onSubmit={onSubmit} className="space-y-5">
         {error && (

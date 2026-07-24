@@ -2,9 +2,9 @@ import Link from 'next/link';
 import type { Metadata } from 'next';
 
 export const metadata: Metadata = {
-  title: 'Security & Compliance — SpecialParent.in',
+  title: 'Security & Compliance — SpecialParents.in',
   description:
-    'How SpecialParent.in protects family, child, therapist and school data — built around India’s DPDP Act, with HIPAA- and FERPA-inspired controls.',
+    'How SpecialParents.in protects family, child, therapist and school data — built around India’s DPDP Act, with HIPAA- and FERPA-inspired controls.',
 };
 
 interface ComplianceItem {
@@ -111,7 +111,7 @@ export default function SecurityPage() {
           <Link href="/" className="flex items-center gap-3">
             <Logo className="w-10 h-10" />
             <span className="font-display text-2xl text-sage-900 leading-none">
-              SpecialParent<span className="text-coral-500">.in</span>
+              SpecialParents<span className="text-coral-500">.in</span>
             </span>
           </Link>
           <nav className="hidden md:flex items-center gap-8 text-sage-700">
@@ -227,13 +227,13 @@ export default function SecurityPage() {
           </div>
           <div className="flex flex-col gap-3">
             <a
-              href="mailto:security@specialparent.in"
+              href="mailto:security@specialparents.in"
               className="btn-coral text-lg justify-center"
             >
-              security@specialparent.in
+              security@specialparents.in
             </a>
             <a
-              href="mailto:privacy@specialparent.in"
+              href="mailto:privacy@specialparents.in"
               className="btn-secondary text-lg justify-center"
             >
               Data &amp; privacy requests
@@ -246,10 +246,10 @@ export default function SecurityPage() {
         <div className="container-app py-10 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 text-sage-600 text-sm">
           <div className="flex items-center gap-3">
             <Logo className="w-8 h-8" />
-            <span className="font-display text-lg text-sage-900">SpecialParent.in</span>
+            <span className="font-display text-lg text-sage-900">SpecialParents.in</span>
           </div>
           <p>
-            © {new Date().getFullYear()} SpecialParent.in — Built with care for Indian families.
+            © {new Date().getFullYear()} SpecialParents.in — Built with care for Indian families.
           </p>
         </div>
       </footer>

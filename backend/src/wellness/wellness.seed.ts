@@ -208,13 +208,13 @@ export const WELLNESS_SEED: Seed[] = [
     audience: 'PARENT',
     format: 'ONLINE',
     title: 'IEP + RPWD Act masterclass',
-    provider: 'SpecialParent.in (in-house)',
+    provider: 'SpecialParents.in (in-house)',
     description:
       'Free 90-minute workshop covering how to ask for an IEP, what accommodations are legally protected under the RPWD Act, and how to escalate calmly.',
     languages: ['EN', 'HI'],
     costHint: 'Free',
     scheduleHint: 'Second Saturday of every month, 5 pm IST',
-    contactUrl: 'mailto:workshops@specialparent.in',
+    contactUrl: 'mailto:workshops@specialparents.in',
   },
   {
     category: 'PARENT_TRAINING',

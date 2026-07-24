@@ -366,7 +366,7 @@ export class TherapistDirectoryService {
         userId: updated.userId,
         kind: 'SYSTEM',
         title: 'Your therapist profile is live',
-        body: 'Parents can now discover you in the SpecialParent directory.',
+        body: 'Parents can now discover you in the SpecialParents directory.',
         link: '/therapist/profile',
       },
     });

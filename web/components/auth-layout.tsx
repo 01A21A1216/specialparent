@@ -20,7 +20,7 @@ export function AuthLayout({
             <circle cx="16" cy="17" r="1.5" fill="#dc6438" />
             <circle cx="24" cy="17" r="1.5" fill="#dc6438" />
           </svg>
-          <span className="font-display text-2xl">SpecialParent.in</span>
+          <span className="font-display text-2xl">SpecialParents.in</span>
         </Link>
 
         <div className="z-10 max-w-md">

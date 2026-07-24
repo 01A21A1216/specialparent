@@ -185,7 +185,7 @@ function PrivacyCard({ onDeleted }: { onDeleted: () => void }) {
         <div>
           <h3 className="font-medium text-sage-900">Download your data</h3>
           <p className="text-sm text-sage-600 mt-1">
-            Get a JSON copy of every piece of personal data SpecialParent.in holds
+            Get a JSON copy of every piece of personal data SpecialParents.in holds
             about you (and your children where you are the primary caregiver). Under
             India's DPDP Act 2023 this is your right.
           </p>

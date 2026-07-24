@@ -175,7 +175,7 @@ export class PrivacyService {
 
     return {
       exportedAt: new Date().toISOString(),
-      note: 'This export contains all personal data SpecialParent.in holds about you and — where you are the primary caregiver — your child(ren). Diagnostic report FILES are not included (their metadata is); download them separately from each child\'s Reports tab. Under DPDP Act 2023 you may request deletion at any time.',
+      note: 'This export contains all personal data SpecialParents.in holds about you and — where you are the primary caregiver — your child(ren). Diagnostic report FILES are not included (their metadata is); download them separately from each child\'s Reports tab. Under DPDP Act 2023 you may request deletion at any time.',
       user,
       caregiverLinks,
       childrenAsPrimary,

@@ -1,4 +1,4 @@
-// SpecialParent.in — Prisma schema
+// SpecialParents.in — Prisma schema
 // Covers PRD §11 Core Entities and the Phase 1 MVP feature set,
 // designed to extend cleanly into school/IEP, govt schemes, payments etc.
 

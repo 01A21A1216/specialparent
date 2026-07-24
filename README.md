@@ -1,8 +1,8 @@
-# SpecialParent.in
+# SpecialParents.in
 
 > A warm, accessible digital home for Indian families, schools, therapists, and NGOs supporting children with special needs.
 
-This is a **Phase 1 MVP** built end-to-end from the SpecialParent.in PRD:
+This is a **Phase 1 MVP** built end-to-end from the SpecialParents.in PRD:
 - Full-stack TypeScript: **Next.js 15** (App Router) frontend + **NestJS 10** backend.
 - **PostgreSQL** + **Prisma ORM** + **Redis** (cache/throttle).
 - **JWT auth** with refresh-token rotation, RBAC, audit logging.
@@ -36,11 +36,11 @@ That's it. Wait ~60 seconds for first build and migration, then visit:
 
 ### Demo accounts (all use password `Demo1234!`)
 
-- **`parent@specialparent.in`** — Priya Iyer, parent of Aanya (autism, age 6) and Arjun (ADHD, age 9)
-- **`therapist@specialparent.in`** — Dr. Ananya Rao, speech therapist (sees their caseload)
-- **`teacher@specialparent.in`** — Ms. Lakshmi Menon, special educator at Inclusive Wings School
-- **`school@specialparent.in`** — Mr. Vikram Sharma, school admin (sees the school portal)
-- **`admin@specialparent.in`** — Platform admin (sees all data)
+- **`parent@specialparents.in`** — Priya Iyer, parent of Aanya (autism, age 6) and Arjun (ADHD, age 9)
+- **`therapist@specialparents.in`** — Dr. Ananya Rao, speech therapist (sees their caseload)
+- **`teacher@specialparents.in`** — Ms. Lakshmi Menon, special educator at Inclusive Wings School
+- **`school@specialparents.in`** — Mr. Vikram Sharma, school admin (sees the school portal)
+- **`admin@specialparents.in`** — Platform admin (sees all data)
 
 Each role gets a tailored navigation and dashboard. The parent flow (signup → child profile → milestones, goals, therapy, mood logging, AAC board, AI guide) is the deepest path; therapist, school, and govt portals are credible Phase-1 slices.
 
@@ -206,4 +206,4 @@ docker compose exec postgres psql -U specialparent  # psql shell
 
 ## License
 
-This is a starting point built from the SpecialParent.in PRD. Use it freely for your project.
+This is a starting point built from the SpecialParents.in PRD. Use it freely for your project.

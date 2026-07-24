@@ -19,7 +19,7 @@ export interface MailInput {
 export class MailerService implements OnModuleInit {
   private readonly logger = new Logger(MailerService.name);
   private transporter: Transporter | null = null;
-  private fromAddress = 'SpecialParent.in <no-reply@specialparent.in>';
+  private fromAddress = 'SpecialParents.in <no-reply@specialparents.in>';
 
   constructor(private readonly config: ConfigService) {}
 

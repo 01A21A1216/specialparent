@@ -168,7 +168,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       <header className="lg:hidden sticky top-0 z-30 bg-cream-50/90 backdrop-blur border-b border-sage-100 px-4 py-3 flex items-center justify-between">
         <Link href="/dashboard" className="flex items-center gap-2">
           <Logo className="w-8 h-8" />
-          <span className="font-display text-lg text-sage-900">SpecialParent</span>
+          <span className="font-display text-lg text-sage-900">SpecialParents</span>
         </Link>
         <div className="flex items-center gap-1">
           <button
@@ -208,7 +208,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             <div className="flex items-center gap-2">
               <Logo className="w-8 h-8" />
               <span className="font-display text-xl text-sage-900">
-                SpecialParent
+                SpecialParents
               </span>
             </div>
             <button
@@ -231,7 +231,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             {!desktopCollapsed && (
               <div className="flex flex-col min-w-0">
                 <span className="font-display text-2xl text-sage-900 leading-none">
-                  SpecialParent
+                  SpecialParents
                 </span>
                 <span className="text-xs tracking-widest text-coral-500 mt-1">
                   .IN

@@ -78,10 +78,10 @@ export class AuthService {
     const link = `${this.webUrl()}/reset-password?token=${rawToken}`;
     await this.mail.send({
       to: user.email,
-      subject: 'Reset your SpecialParent.in password',
+      subject: 'Reset your SpecialParents.in password',
       html: `
         <p>Hi ${escapeHtml(user.fullName)},</p>
-        <p>Someone (hopefully you) asked to reset the password on your SpecialParent.in account.</p>
+        <p>Someone (hopefully you) asked to reset the password on your SpecialParents.in account.</p>
         <p><a href="${link}">Click here to choose a new password</a>. This link is valid for the next hour.</p>
         <p>If you didn't request this, you can ignore this email — your account stays as it was.</p>
       `,
@@ -123,7 +123,7 @@ export class AuthService {
     const link = `${this.webUrl()}/verify-email?token=${rawToken}`;
     await this.mail.send({
       to: user.email,
-      subject: 'Verify your SpecialParent.in email',
+      subject: 'Verify your SpecialParents.in email',
       html: `
         <p>Hi ${escapeHtml(user.fullName)},</p>
         <p>Confirm this email is yours so we can send you appointment reminders and important account notices.</p>

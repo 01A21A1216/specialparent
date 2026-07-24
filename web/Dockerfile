@@ -1,4 +1,4 @@
-# SpecialParent.in web — multi-stage build using Next.js standalone output.
+# SpecialParents.in web — multi-stage build using Next.js standalone output.
 # Final image is ~200 MB (Alpine + minimal runtime deps) vs ~800 MB if we
 # copied full node_modules. Runs as an unprivileged user.
 

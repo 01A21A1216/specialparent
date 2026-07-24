@@ -1,4 +1,4 @@
-// SpecialParent.in service worker — minimal offline story.
+// SpecialParents.in service worker — minimal offline story.
 // Strategy: network-first for HTML (so app updates propagate), cache-first
 // for /icons + /_next/static (long-lived immutable), skip everything under
 // /api (must be online — health data). Never cache authenticated content.

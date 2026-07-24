@@ -1,4 +1,4 @@
-# SpecialParent.in — Product Requirements Document
+# SpecialParents.in — Product Requirements Document
 
 **Version**: 1.0 (initial PRD, derived from the shipped Phase-1 platform)
 **Last updated**: 2026-07-22
@@ -8,7 +8,7 @@
 
 ## 1. Executive summary
 
-SpecialParent.in is a full-stack platform for Indian families of children with special needs (autism, ADHD, learning differences, speech delays, sensory-processing differences, and related conditions). It gives families a single, gentle home for tracking their child's development, coordinating with the professionals in their care circle, running the paperwork that Indian special-needs care demands (IEPs, RPWD-Act documentation, government schemes), and making informed decisions about therapies and interventions.
+SpecialParents.in is a full-stack platform for Indian families of children with special needs (autism, ADHD, learning differences, speech delays, sensory-processing differences, and related conditions). It gives families a single, gentle home for tracking their child's development, coordinating with the professionals in their care circle, running the paperwork that Indian special-needs care demands (IEPs, RPWD-Act documentation, government schemes), and making informed decisions about therapies and interventions.
 
 The platform is built for four principal user types — **parents/caregivers**, **therapists/doctors**, **teachers/special educators/school admins**, and **platform admins** — each with a distinct navigation, workflow, and view of the same underlying data.
 
@@ -25,7 +25,7 @@ Families of neurodivergent children in India navigate a fragmented care landscap
 - **Wellness and treatment information is a marketing minefield.** Unproven therapies (stem cell for autism, chelation, aggressive biomedical protocols) are actively sold to desperate families at ₹5–15 lakh a course. Families cannot easily tell what has evidence and what does not.
 - **Caregiver burnout is invisible.** The parent's own wellbeing is the load-bearing element for the child's outcome and it goes unattended.
 
-SpecialParent.in exists to compress this problem: one place for the records, one care team that can see them, tools calibrated to Indian law and Indian language, and honest editorial standards for anything the platform recommends.
+SpecialParents.in exists to compress this problem: one place for the records, one care team that can see them, tools calibrated to Indian law and Indian language, and honest editorial standards for anything the platform recommends.
 
 ---
 

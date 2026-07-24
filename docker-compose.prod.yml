@@ -41,7 +41,7 @@ services:
       DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}?schema=public
       JWT_ACCESS_SECRET: ${JWT_ACCESS_SECRET:?JWT_ACCESS_SECRET is required (openssl rand -hex 32)}
       JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET:?JWT_REFRESH_SECRET is required (openssl rand -hex 32)}
-      CORS_ORIGIN: ${CORS_ORIGIN:?CORS_ORIGIN is required (e.g. https://app.specialparent.in)}
+      CORS_ORIGIN: ${CORS_ORIGIN:?CORS_ORIGIN is required (e.g. https://app.specialparents.in)}
       SENTRY_DSN: ${SENTRY_DSN:-}
       LOG_LEVEL: ${LOG_LEVEL:-info}
       SMTP_URL: ${SMTP_URL:-}

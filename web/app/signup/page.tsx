@@ -10,7 +10,7 @@ import { useAuth } from '../../components/auth-provider';
 type SignupRole = 'PARENT' | 'THERAPIST' | 'DOCTOR' | 'TEACHER' | 'SPECIAL_EDUCATOR' | 'SCHOOL_ADMIN';
 
 const ROLE_OPTIONS: Array<{ value: SignupRole; label: string }> = [
-  { value: 'PARENT', label: 'Parent' },
+  { value: 'PARENT', label: 'Parents / Family' },
   { value: 'THERAPIST', label: 'Therapist' },
   { value: 'DOCTOR', label: 'Doctor' },
   { value: 'SPECIAL_EDUCATOR', label: 'Special educator' },

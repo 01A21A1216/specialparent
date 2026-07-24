@@ -86,7 +86,7 @@ export default function InviteAcceptPage() {
       <div className="w-full max-w-lg">
         <div className="text-center mb-8">
           <Link href="/" className="font-display text-3xl text-sage-900">
-            SpecialParent<span className="text-coral-500">.in</span>
+            SpecialParents<span className="text-coral-500">.in</span>
           </Link>
         </div>
 

@@ -130,7 +130,7 @@ function TherapistDetail({
           <div className="min-w-0 flex-1">
             <div className="flex items-center gap-2 flex-wrap mb-1">
               <span className="chip text-[11px] bg-sage-100 text-sage-800 border border-sage-200">
-                ✓ Verified by SpecialParent.in
+                ✓ Verified by SpecialParents.in
               </span>
               {t.level && (
                 <span

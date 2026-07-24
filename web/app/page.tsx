@@ -24,7 +24,7 @@ export default function HomePage() {
           <Link href="/" className="flex items-center gap-3">
             <Logo className="w-10 h-10" />
             <span className="font-display text-2xl text-sage-900 leading-none">
-              SpecialParent<span className="text-coral-500">.in</span>
+              SpecialParents<span className="text-coral-500">.in</span>
             </span>
           </Link>
           <nav className="hidden md:flex items-center gap-8 text-sage-700">
@@ -94,7 +94,7 @@ export default function HomePage() {
             </Link>
           </div>
           <p className="mt-4 text-sm text-sage-500">
-            Demo accounts: <code className="px-1.5 py-0.5 rounded bg-sage-100 text-sage-700 text-xs">parent@specialparent.in</code>{' '}
+            Demo accounts: <code className="px-1.5 py-0.5 rounded bg-sage-100 text-sage-700 text-xs">parent@specialparents.in</code>{' '}
             · password <code className="px-1.5 py-0.5 rounded bg-sage-100 text-sage-700 text-xs">Demo1234!</code>
           </p>
         </div>
@@ -122,7 +122,7 @@ export default function HomePage() {
 
           <div className="lg:col-span-7 space-y-6">
             <p className="text-sage-700 text-lg leading-relaxed">
-              SpecialParent.in is a comprehensive digital ecosystem designed for
+              SpecialParents.in is a comprehensive digital ecosystem designed for
               Indian families, schools, therapy centers, NGOs, and healthcare
               professionals supporting children with special needs — including
               Autism Spectrum Disorder (ASD), ADHD, speech disorders, developmental
@@ -259,7 +259,7 @@ export default function HomePage() {
             </p>
           </div>
           <div className="flex flex-col gap-3">
-            <a href="mailto:hello@specialparent.in" className="btn-coral text-lg justify-center">
+            <a href="mailto:hello@specialparents.in" className="btn-coral text-lg justify-center">
               Talk to us
             </a>
             <Link href="/schemes" className="btn-secondary text-lg justify-center">
@@ -274,10 +274,10 @@ export default function HomePage() {
         <div className="container-app py-10 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 text-sage-600 text-sm">
           <div className="flex items-center gap-3">
             <Logo className="w-8 h-8" />
-            <span className="font-display text-lg text-sage-900">SpecialParent.in</span>
+            <span className="font-display text-lg text-sage-900">SpecialParents.in</span>
           </div>
           <p>
-            © {new Date().getFullYear()} SpecialParent.in — Built with care for Indian families.
+            © {new Date().getFullYear()} SpecialParents.in — Built with care for Indian families.
           </p>
         </div>
       </footer>

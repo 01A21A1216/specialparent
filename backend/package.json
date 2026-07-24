@@ -1,7 +1,7 @@
 {
   "name": "specialparent-backend",
   "version": "0.1.0",
-  "description": "SpecialParent.in API — NestJS + Prisma + Postgres + Redis",
+  "description": "SpecialParents.in API — NestJS + Prisma + Postgres + Redis",
   "private": true,
   "scripts": {
     "build": "nest build",

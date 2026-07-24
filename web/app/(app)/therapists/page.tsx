@@ -236,7 +236,7 @@ export default function TherapistsPage() {
                 <div className="flex flex-col items-end gap-1">
                   <span
                     className="chip text-[10px] bg-sage-100 text-sage-800 border border-sage-200"
-                    title="Verified by SpecialParent.in"
+                    title="Verified by SpecialParents.in"
                   >
                     ✓ Verified
                   </span>

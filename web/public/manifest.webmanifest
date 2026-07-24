@@ -1,6 +1,6 @@
 {
-  "name": "SpecialParent.in",
-  "short_name": "SpecialParent",
+  "name": "SpecialParents.in",
+  "short_name": "SpecialParents",
   "description": "A calmer place to care for your child — therapy tracking, milestones, community, and AI guidance for Indian families.",
   "start_url": "/dashboard",
   "display": "standalone",

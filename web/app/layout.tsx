@@ -19,14 +19,14 @@ const display = Fraunces({
 });
 
 export const metadata: Metadata = {
-  title: 'SpecialParent.in — India\'s Inclusive Special Needs Care Ecosystem',
+  title: 'SpecialParents.in — India\'s Inclusive Special Needs Care Ecosystem',
   description:
     'A warm, accessible platform for Indian families, schools, therapists and NGOs supporting children with special needs.',
   manifest: '/manifest.webmanifest',
   appleWebApp: {
     capable: true,
     statusBarStyle: 'default',
-    title: 'SpecialParent',
+    title: 'SpecialParents',
   },
   icons: {
     icon: [{ url: '/icons/icon-192.svg', type: 'image/svg+xml' }],

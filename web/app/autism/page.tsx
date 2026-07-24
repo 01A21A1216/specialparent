@@ -2,7 +2,7 @@ import Link from 'next/link';
 import type { Metadata } from 'next';
 
 export const metadata: Metadata = {
-  title: 'Understanding Autism — SpecialParent.in',
+  title: 'Understanding Autism — SpecialParents.in',
   description:
     'A warm, India-aware guide for parents: early signs, getting an evaluation, the spectrum, therapies, doctors, government support systems and helplines.',
 };
@@ -298,7 +298,7 @@ export default function AutismPage() {
           <Link href="/" className="flex items-center gap-3">
             <Logo className="w-10 h-10" />
             <span className="font-display text-2xl text-sage-900 leading-none">
-              SpecialParent<span className="text-coral-500">.in</span>
+              SpecialParents<span className="text-coral-500">.in</span>
             </span>
           </Link>
           <nav className="hidden md:flex items-center gap-8 text-sage-700">
@@ -706,10 +706,10 @@ export default function AutismPage() {
         <div className="container-app py-10 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 text-sage-600 text-sm">
           <div className="flex items-center gap-3">
             <Logo className="w-8 h-8" />
-            <span className="font-display text-lg text-sage-900">SpecialParent.in</span>
+            <span className="font-display text-lg text-sage-900">SpecialParents.in</span>
           </div>
           <p>
-            © {new Date().getFullYear()} SpecialParent.in — Built with care for Indian families.
+            © {new Date().getFullYear()} SpecialParents.in — Built with care for Indian families.
           </p>
         </div>
       </footer>

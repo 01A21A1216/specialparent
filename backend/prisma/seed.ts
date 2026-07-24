@@ -10,16 +10,16 @@ import * as bcrypt from 'bcryptjs';
 const prisma = new PrismaClient();
 
 async function main() {
-  console.log('🌱 Seeding SpecialParent.in (clean — no child demo data)...');
+  console.log('🌱 Seeding SpecialParents.in (clean — no child demo data)...');
 
   const passwordHash = await bcrypt.hash('Demo1234!', 12);
 
   // ── Users (login accounts only) ─────────────────────────
   const parent = await prisma.user.upsert({
-    where: { email: 'parent@specialparent.in' },
+    where: { email: 'parent@specialparents.in' },
     update: {},
     create: {
-      email: 'parent@specialparent.in',
+      email: 'parent@specialparents.in',
       fullName: 'Priya Iyer',
       passwordHash,
       role: Role.PARENT,
@@ -28,10 +28,10 @@ async function main() {
   });
 
   const therapist = await prisma.user.upsert({
-    where: { email: 'therapist@specialparent.in' },
+    where: { email: 'therapist@specialparents.in' },
     update: {},
     create: {
-      email: 'therapist@specialparent.in',
+      email: 'therapist@specialparents.in',
       fullName: 'Dr. Ananya Rao',
       passwordHash,
       role: Role.THERAPIST,
@@ -50,10 +50,10 @@ async function main() {
   });
 
   await prisma.user.upsert({
-    where: { email: 'admin@specialparent.in' },
+    where: { email: 'admin@specialparents.in' },
     update: {},
     create: {
-      email: 'admin@specialparent.in',
+      email: 'admin@specialparents.in',
       fullName: 'Platform Admin',
       passwordHash,
       role: Role.ADMIN,
@@ -61,10 +61,10 @@ async function main() {
   });
 
   await prisma.user.upsert({
-    where: { email: 'teacher@specialparent.in' },
+    where: { email: 'teacher@specialparents.in' },
     update: {},
     create: {
-      email: 'teacher@specialparent.in',
+      email: 'teacher@specialparents.in',
       fullName: 'Ms. Lakshmi Menon',
       passwordHash,
       role: Role.TEACHER,
@@ -72,10 +72,10 @@ async function main() {
   });
 
   await prisma.user.upsert({
-    where: { email: 'school@specialparent.in' },
+    where: { email: 'school@specialparents.in' },
     update: {},
     create: {
-      email: 'school@specialparent.in',
+      email: 'school@specialparents.in',
       fullName: 'Mr. Vikram Sharma',
       passwordHash,
       role: Role.SCHOOL_ADMIN,
@@ -92,7 +92,7 @@ async function main() {
     {
       id: 'seed-welcome',
       authorId: parent.id,
-      title: 'Welcome to SpecialParent.in 🤍',
+      title: 'Welcome to SpecialParents.in 🤍',
       body: 'Hi everyone — this is a space for Indian parents and caregivers of children with special needs. Be kind, ask anything, share what works. You are not alone.',
       category: PostCategory.GENERAL,
       tags: ['welcome', 'community'],
@@ -276,11 +276,11 @@ async function main() {
 
   console.log('✅ Seeding complete.');
   console.log('\nDemo accounts (password: Demo1234!):');
-  console.log('  parent@specialparent.in    — Priya (parent — no children yet, add your own)');
-  console.log('  therapist@specialparent.in — Dr. Ananya (speech therapist)');
-  console.log('  teacher@specialparent.in   — Ms. Lakshmi (special educator)');
-  console.log('  school@specialparent.in    — Mr. Vikram (school admin)');
-  console.log('  admin@specialparent.in     — Platform admin');
+  console.log('  parent@specialparents.in    — Priya (parent — no children yet, add your own)');
+  console.log('  therapist@specialparents.in — Dr. Ananya (speech therapist)');
+  console.log('  teacher@specialparents.in   — Ms. Lakshmi (special educator)');
+  console.log('  school@specialparents.in    — Mr. Vikram (school admin)');
+  console.log('  admin@specialparents.in     — Platform admin');
 }
 
 main()

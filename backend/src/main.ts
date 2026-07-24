@@ -70,7 +70,7 @@ async function bootstrap() {
   // Swagger docs (dev only)
   if (process.env.NODE_ENV !== 'production') {
     const config = new DocumentBuilder()
-      .setTitle('SpecialParent.in API')
+      .setTitle('SpecialParents.in API')
       .setDescription('Inclusive special-needs care platform — REST API')
       .setVersion('0.1.0')
       .addBearerAuth()
@@ -83,7 +83,7 @@ async function bootstrap() {
 
   const port = parseInt(process.env.PORT ?? '4000', 10);
   await app.listen(port, '0.0.0.0');
-  logger.log(`SpecialParent API ready → http://localhost:${port}/api`);
+  logger.log(`SpecialParents API ready → http://localhost:${port}/api`);
   logger.log(`Swagger docs           → http://localhost:${port}/api/docs`);
 }
 
