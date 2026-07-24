@@ -167,6 +167,11 @@ model TherapistProfile {
 
   @@index([verificationStatus])
   @@index([city, verificationStatus])
+  // Matches the public directory's default sort inside the VERIFIED
+  // partition — acceptingNewClients first (so intake-open therapists
+  // surface), then most-recently-verified first. Avoids a filesort on
+  // every /public/therapists request.
+  @@index([verificationStatus, acceptingNewClients, verifiedAt(sort: Desc)])
 }
 
 // Structured education record. The admin cross-checks each row against

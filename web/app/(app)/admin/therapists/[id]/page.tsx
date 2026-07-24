@@ -8,22 +8,18 @@ import { api } from '../../../../../lib/api';
 import { ApiState } from '../../../../../components/api-state';
 import { useAuth } from '../../../../../components/auth-provider';
 import { languageLabel } from '../../../../../lib/languages';
+import {
+  STATUS_META, LEVEL_META,
+  type TherapistLevel as Level,
+  type VerificationStatus as Status,
+} from '../../../../../lib/therapist-levels';
+import { initials } from '../../../../../lib/utils';
 
 // Admin detail-review view for a single therapist profile. Structured
 // checklist of the things the reviewer must eyeball before approving:
 // LinkedIn, each certification URL, each education entry, bio. The
 // checkboxes are advisory (not persisted) — they're a checklist for
 // the reviewer, not a compliance record.
-
-type Status = 'DRAFT' | 'PENDING_REVIEW' | 'VERIFIED' | 'REJECTED' | 'SUSPENDED';
-type Level = 'INTERN' | 'RBT' | 'BCABA' | 'BCBA';
-
-const LEVEL_META: Record<Level, { short: string; long: string; tone: string }> = {
-  INTERN: { short: 'Intern', long: 'Intern / Trainee (supervised)',                          tone: 'bg-cream-100 text-sage-700 border border-cream-300' },
-  RBT:    { short: 'RBT',    long: 'Registered Behavior Technician',                          tone: 'bg-mist-100 text-mist-800 border border-mist-300' },
-  BCABA:  { short: 'BCaBA',  long: 'Board Certified Assistant Behavior Analyst',              tone: 'bg-sage-100 text-sage-800 border border-sage-300' },
-  BCBA:   { short: 'BCBA',   long: 'Board Certified Behavior Analyst',                        tone: 'bg-coral-100 text-coral-800 border border-coral-300' },
-};
 
 interface Education {
   id: string; degree: string; institution: string;
@@ -57,19 +53,11 @@ interface Detail {
   submittedAt: string | null;
   verifiedAt: string | null;
   rejectionReason: string | null;
-  adminNotes: string | null;
   user: { id: string; fullName: string; email: string; role: string; phone: string | null };
   educations: Education[];
   certifications: Certification[];
 }
 
-const STATUS_META: Record<Status, { label: string; tone: string }> = {
-  DRAFT: { label: 'Draft', tone: 'bg-cream-200 text-sage-800 border-cream-400' },
-  PENDING_REVIEW: { label: 'Pending review', tone: 'bg-mist-100 text-mist-800 border-mist-300' },
-  VERIFIED: { label: 'Verified', tone: 'bg-sage-100 text-sage-800 border-sage-300' },
-  REJECTED: { label: 'Rejected', tone: 'bg-coral-100 text-coral-800 border-coral-300' },
-  SUSPENDED: { label: 'Suspended', tone: 'bg-coral-100 text-coral-900 border-coral-400' },
-};
 
 export default function AdminTherapistDetailPage() {
   const params = useParams<{ id: string }>();
@@ -135,13 +123,6 @@ function ReviewView({ row, onChanged, onDeleted }: { row: Detail; onChanged: () 
     finally { setBusy(false); }
   }
 
-  const initials = row.user.fullName
-    .split(' ')
-    .slice(0, 2)
-    .map((n) => n[0])
-    .join('')
-    .toUpperCase();
-
   return (
     <>
       <header className="card border border-sage-100 flex items-start gap-4 flex-wrap">
@@ -149,7 +130,7 @@ function ReviewView({ row, onChanged, onDeleted }: { row: Detail; onChanged: () 
           {row.photoUrl ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img src={row.photoUrl} alt="" className="w-full h-full object-cover" />
-          ) : initials}
+          ) : initials(row.user.fullName)}
         </div>
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2 flex-wrap mb-1">

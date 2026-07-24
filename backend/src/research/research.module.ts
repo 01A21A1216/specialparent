@@ -80,11 +80,14 @@ export class TreatmentResearchService implements OnModuleInit {
   constructor(private readonly prisma: PrismaService) {}
 
   /**
-   * Load the curated seed on boot. Idempotent: title is unique so
-   * skipDuplicates makes this safe against dev-mode restarts and against
-   * admins who've edited an existing row (their row wins on title match).
+   * Load the curated seed on first boot. Idempotent — a count() gate
+   * avoids shipping the whole seed payload to Postgres on every restart
+   * once the table is populated. (Title is also @unique so admin-edited
+   * rows aren't overwritten if this ever runs a second time.)
    */
   async onModuleInit() {
+    const count = await this.prisma.treatmentResearch.count();
+    if (count > 0) return;
     await this.prisma.treatmentResearch.createMany({
       data: TREATMENT_RESEARCH_SEED.map((r) => ({
         ...r,

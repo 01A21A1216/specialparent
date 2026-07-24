@@ -8,19 +8,15 @@ import { ApiState } from '../../../../components/api-state';
 import { useAuth } from '../../../../components/auth-provider';
 import { api } from '../../../../lib/api';
 import { languageLabel } from '../../../../lib/languages';
+import {
+  LEVEL_META,
+  type ServiceMode as Mode, type TherapistLevel as Level,
+} from '../../../../lib/therapist-levels';
+import { initials } from '../../../../lib/utils';
 
 // Public detail page for one verified therapist. When the viewer is a
 // signed-in PARENT, we surface the "Invite to my child's care team" action.
 
-type Mode = 'ONLINE' | 'IN_PERSON' | 'HYBRID';
-type Level = 'INTERN' | 'RBT' | 'BCABA' | 'BCBA';
-
-const LEVEL_META: Record<Level, { short: string; long: string; tone: string }> = {
-  INTERN: { short: 'Intern', long: 'Intern / Trainee (supervised)',                          tone: 'bg-cream-100 text-sage-700 border border-cream-300' },
-  RBT:    { short: 'RBT',    long: 'Registered Behavior Technician',                          tone: 'bg-mist-100 text-mist-800 border border-mist-300' },
-  BCABA:  { short: 'BCaBA',  long: 'Board Certified Assistant Behavior Analyst',              tone: 'bg-sage-100 text-sage-800 border border-sage-300' },
-  BCBA:   { short: 'BCBA',   long: 'Board Certified Behavior Analyst',                        tone: 'bg-coral-100 text-coral-800 border border-coral-300' },
-};
 
 interface Education {
   id: string;
@@ -119,12 +115,7 @@ function TherapistDetail({
               // eslint-disable-next-line @next/next/no-img-element
               <img src={t.photoUrl} alt="" className="w-full h-full object-cover" />
             ) : (
-              t.fullName
-                .split(' ')
-                .slice(0, 2)
-                .map((n) => n[0])
-                .join('')
-                .toUpperCase()
+              initials(t.fullName)
             )}
           </div>
           <div className="min-w-0 flex-1">

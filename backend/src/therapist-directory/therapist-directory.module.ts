@@ -6,6 +6,7 @@ import {
   ForbiddenException,
   Get,
   Injectable,
+  Logger,
   Module,
   NotFoundException,
   Param,
@@ -31,7 +32,6 @@ import {
   MinLength,
 } from 'class-validator';
 import {
-  NotificationKind,
   Prisma,
   Role,
   ServiceMode,
@@ -39,6 +39,8 @@ import {
   VerificationStatus,
 } from '@prisma/client';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { AdminGuard } from '../admin/admin.module';
+import { ChildAccess } from '../common/child-access';
 import { CurrentUser, AuthUser } from '../common/current-user.decorator';
 import { PrismaService } from '../prisma/prisma.service';
 
@@ -117,7 +119,19 @@ export class InviteTherapistDto {
 
 @Injectable()
 export class TherapistDirectoryService {
-  constructor(private readonly prisma: PrismaService) {}
+  private readonly logger = new Logger(TherapistDirectoryService.name);
+
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly childAccess: ChildAccess,
+  ) {}
+
+  /** Fire-and-forget notification helper — never blocks the HTTP response. */
+  private notify(userId: string, title: string, body: string, link: string) {
+    return this.prisma.notification.create({
+      data: { userId, kind: 'SYSTEM', title, body, link },
+    }).catch((e) => this.logger.warn(`notification.create failed: ${e?.message ?? e}`));
+  }
 
   // ── Self-serve ─────────────────────────────────────────────────
 
@@ -318,13 +332,10 @@ export class TherapistDirectoryService {
   }
 
   // ── Admin — verification queue ───────────────────────────────
+  // Role enforcement lives on the controller via AdminGuard so these
+  // methods never need to re-check.
 
-  private assertAdmin(user: AuthUser) {
-    if (user.role !== 'ADMIN') throw new ForbiddenException('Admin only');
-  }
-
-  async adminList(user: AuthUser, status?: VerificationStatus) {
-    this.assertAdmin(user);
+  async adminList(_user: AuthUser, status?: VerificationStatus) {
     return this.prisma.therapistProfile.findMany({
       where: status ? { verificationStatus: status } : {},
       orderBy: [{ verificationStatus: 'asc' }, { submittedAt: 'desc' }, { updatedAt: 'desc' }],
@@ -336,8 +347,7 @@ export class TherapistDirectoryService {
     });
   }
 
-  async adminGet(user: AuthUser, id: string) {
-    this.assertAdmin(user);
+  async adminGet(_user: AuthUser, id: string) {
     const row = await this.prisma.therapistProfile.findUnique({
       where: { id },
       include: {
@@ -351,7 +361,6 @@ export class TherapistDirectoryService {
   }
 
   async adminVerify(user: AuthUser, id: string) {
-    this.assertAdmin(user);
     const updated = await this.prisma.therapistProfile.update({
       where: { id },
       data: {
@@ -361,20 +370,16 @@ export class TherapistDirectoryService {
         rejectionReason: null,
       },
     });
-    await this.prisma.notification.create({
-      data: {
-        userId: updated.userId,
-        kind: 'SYSTEM',
-        title: 'Your therapist profile is live',
-        body: 'Parents can now discover you in the SpecialParents directory.',
-        link: '/therapist/profile',
-      },
-    });
+    void this.notify(
+      updated.userId,
+      'Your therapist profile is live',
+      'Parents can now discover you in the SpecialParents directory.',
+      '/therapist/profile',
+    );
     return updated;
   }
 
   async adminReject(user: AuthUser, id: string, dto: RejectProfileDto) {
-    this.assertAdmin(user);
     const updated = await this.prisma.therapistProfile.update({
       where: { id },
       data: {
@@ -383,21 +388,17 @@ export class TherapistDirectoryService {
         verifiedById: user.id,
       },
     });
-    await this.prisma.notification.create({
-      data: {
-        userId: updated.userId,
-        kind: 'SYSTEM',
-        title: 'Your therapist profile needs changes',
-        body: dto.reason.slice(0, 240),
-        link: '/therapist/profile',
-      },
-    });
+    void this.notify(
+      updated.userId,
+      'Your therapist profile needs changes',
+      dto.reason.slice(0, 240),
+      '/therapist/profile',
+    );
     return updated;
   }
 
   async adminSuspend(user: AuthUser, id: string, dto: RejectProfileDto) {
-    this.assertAdmin(user);
-    return this.prisma.therapistProfile.update({
+    const updated = await this.prisma.therapistProfile.update({
       where: { id },
       data: {
         verificationStatus: 'SUSPENDED',
@@ -405,6 +406,14 @@ export class TherapistDirectoryService {
         verifiedById: user.id,
       },
     });
+    // Previously suspend was silent — practitioners should hear about it too.
+    void this.notify(
+      updated.userId,
+      'Your therapist profile has been paused',
+      dto.reason.slice(0, 240),
+      '/therapist/profile',
+    );
+    return updated;
   }
 
   // ── Public directory ─────────────────────────────────────────
@@ -488,16 +497,9 @@ export class TherapistDirectoryService {
     therapistProfileId: string,
     dto: InviteTherapistDto,
   ) {
-    // Only the primary caregiver of the child (or admin) can create invites.
-    if (user.role !== 'ADMIN') {
-      const link = await this.prisma.caregiver.findUnique({
-        where: { userId_childId: { userId: user.id, childId } },
-      });
-      if (!link) throw new ForbiddenException('Not a caregiver of this child');
-      if (!link.isPrimary) {
-        throw new ForbiddenException('Only the primary caregiver can invite therapists');
-      }
-    }
+    // Primary-caregiver enforcement lives in ChildAccess so InvitesService
+    // and this module can't drift on the rule.
+    await this.childAccess.assertPrimaryCaregiver(user.id, user.role, childId);
 
     const profile = await this.prisma.therapistProfile.findFirst({
       where: { id: therapistProfileId, verificationStatus: 'VERIFIED' },
@@ -535,17 +537,14 @@ export class TherapistDirectoryService {
       },
     });
 
-    // Notify the therapist in-app. The email carbon is handled by the
-    // mailer when SMTP is configured; for now the notification + link work.
-    await this.prisma.notification.create({
-      data: {
-        userId: profile.user.id,
-        kind: NotificationKind.SYSTEM,
-        title: `You've been invited to ${child.fullName}'s care team`,
-        body: `Invitation to join as "${dto.relationship}". Open to review and accept.`,
-        link: `/invite/${token}`,
-      },
-    });
+    // Notify the therapist in-app. Fire-and-forget so a failed notify
+    // doesn't fail the invite creation.
+    void this.notify(
+      profile.user.id,
+      `You've been invited to ${child.fullName}'s care team`,
+      `Invitation to join as "${dto.relationship}". Open to review and accept.`,
+      `/invite/${token}`,
+    );
 
     return invite;
   }
@@ -615,10 +614,11 @@ export class TherapistSelfController {
   }
 }
 
-// Admin — verification queue.
+// Admin — verification queue. AdminGuard is the single source of truth
+// for role enforcement here.
 @ApiTags('therapist')
 @ApiBearerAuth()
-@UseGuards(JwtAuthGuard)
+@UseGuards(JwtAuthGuard, AdminGuard)
 @Controller('admin/therapists')
 export class AdminTherapistController {
   constructor(private readonly svc: TherapistDirectoryService) {}
@@ -718,6 +718,6 @@ export class InviteTherapistController {
     PublicTherapistController,
     InviteTherapistController,
   ],
-  providers: [TherapistDirectoryService],
+  providers: [TherapistDirectoryService, ChildAccess, AdminGuard],
 })
 export class TherapistDirectoryModule {}

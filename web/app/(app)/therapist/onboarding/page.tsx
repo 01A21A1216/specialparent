@@ -2,12 +2,20 @@
 
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useAuth } from '../../../../components/auth-provider';
 import { api } from '../../../../lib/api';
 import { useApi, mutateGlobal } from '../../../../lib/swr';
 import { ApiState } from '../../../../components/api-state';
+import { ChipGroup } from '../../../../components/chip-group';
+import { FormField as Field } from '../../../../components/form-field';
 import { LANGUAGE_CODES, LANGUAGE_LABEL } from '../../../../lib/languages';
+import {
+  LEVEL_ORDER, LEVEL_META,
+  type ServiceMode as Mode, type TherapistLevel as Level,
+  type VerificationStatus as Status,
+} from '../../../../lib/therapist-levels';
+import { toggleIn } from '../../../../lib/arrays';
 
 // Guided 4-step onboarding wizard for a newly-registered practitioner.
 // This exists next to /therapist/profile — the profile page is the
@@ -15,19 +23,7 @@ import { LANGUAGE_CODES, LANGUAGE_LABEL } from '../../../../lib/languages';
 // them from empty state to "Submitted for review" without them having
 // to figure out the shape of the whole form.
 
-type Mode = 'ONLINE' | 'IN_PERSON' | 'HYBRID';
-type Status = 'DRAFT' | 'PENDING_REVIEW' | 'VERIFIED' | 'REJECTED' | 'SUSPENDED';
-type Level = 'INTERN' | 'RBT' | 'BCABA' | 'BCBA';
 type StepId = 'basics' | 'practice' | 'education' | 'credentials' | 'submit';
-
-// Ordered lowest → highest for display; use the short label as the chip text.
-const LEVEL_ORDER: Level[] = ['INTERN', 'RBT', 'BCABA', 'BCBA'];
-const LEVEL_META: Record<Level, { short: string; long: string }> = {
-  INTERN: { short: 'Intern', long: 'Intern / Trainee (supervised)' },
-  RBT:    { short: 'RBT',    long: 'Registered Behavior Technician' },
-  BCABA:  { short: 'BCaBA',  long: 'Board Certified Assistant Behavior Analyst' },
-  BCBA:   { short: 'BCBA',   long: 'Board Certified Behavior Analyst' },
-};
 
 interface Education {
   id: string; degree: string; institution: string;
@@ -64,7 +60,7 @@ const STEPS: { id: StepId; label: string; blurb: string }[] = [
   { id: 'practice', label: 'Practice', blurb: 'How, where, and to whom you deliver care.' },
   { id: 'education', label: 'Education', blurb: 'Where you trained — we cross-check every entry.' },
   { id: 'credentials', label: 'Credentials', blurb: 'RCI registration + any other certifications.' },
-  { id: 'submit', label: 'Review &amp; submit', blurb: 'Send your profile to the review queue.' },
+  { id: 'submit', label: 'Review & submit', blurb: 'Send your profile to the review queue.' },
 ];
 
 export default function OnboardingWizardPage() {
@@ -138,13 +134,14 @@ export default function OnboardingWizardPage() {
 // ─── Progress rail ─────────────────────────────────────────────
 
 function Progress({ current, profile }: { current: StepId; profile: Profile | null }) {
-  const done = useMemo(() => ({
+  // Plain object — cheaper and clearer than useMemo for a 5-key derivation.
+  const done: Record<StepId, boolean> = {
     basics: !!(profile?.specialization && profile.yearsExperience >= 0 && profile.city),
     practice: !!(profile?.languages?.length && profile?.serviceModes?.length),
     education: !!profile?.educations?.length,
     credentials: !!(profile?.linkedinUrl || profile?.certifications?.length),
     submit: profile?.verificationStatus === 'PENDING_REVIEW' || profile?.verificationStatus === 'VERIFIED',
-  }), [profile]);
+  };
 
   return (
     <ol className="flex items-center gap-1 flex-wrap text-xs">
@@ -163,7 +160,7 @@ function Progress({ current, profile }: { current: StepId; profile: Profile | nu
               }`}
             >
               <span className="tabular-nums opacity-70 mr-1">{i + 1}</span>
-              {isDone && !isCurrent ? '✓ ' : ''}{s.label.replace('&amp;', '&')}
+              {isDone && !isCurrent ? '✓ ' : ''}{s.label}
             </span>
             {i < STEPS.length - 1 && <span className="text-sage-300">·</span>}
           </li>
@@ -287,7 +284,6 @@ function BasicsStep({
         onSaveStay={() => save('stay')}
         nextDisabled={!specialization.trim() || !city.trim()}
       />
-      <StepInputStyles />
     </StepFrame>
   );
 }
@@ -307,8 +303,6 @@ function PracticeStep({
   const [acceptingNewClients, setAcceptingNewClients] = useState(profile?.acceptingNewClients ?? true);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
-
-  const toggle = <T,>(list: T[], v: T) => list.includes(v) ? list.filter((x) => x !== v) : [...list, v];
 
   async function save(andThen: 'next' | 'stay') {
     if (!profile) { setErr('Save the Basics step first.'); return; }
@@ -343,20 +337,20 @@ function PracticeStep({
         all={[...LANGUAGE_CODES]}
         labels={LANGUAGE_LABEL}
         selected={languages}
-        onToggle={(v) => setLanguages(toggle(languages, v))}
+        onToggle={(v) => setLanguages(toggleIn(languages, v))}
       />
       <ChipGroup
         label="Session format"
         all={['ONLINE', 'IN_PERSON', 'HYBRID']}
         selected={serviceModes}
         labels={{ ONLINE: '💻 Online', IN_PERSON: '📍 In person', HYBRID: '↔ Hybrid' }}
-        onToggle={(v) => setServiceModes(toggle(serviceModes, v as Mode))}
+        onToggle={(v) => setServiceModes(toggleIn(serviceModes, v as Mode))}
       />
       <ChipGroup
         label="Age groups you work with"
         all={['0-3', '4-7', '8-12', '13-18', '18+']}
         selected={ageGroups}
-        onToggle={(v) => setAgeGroups(toggle(ageGroups, v))}
+        onToggle={(v) => setAgeGroups(toggleIn(ageGroups, v))}
       />
       <Field label="Availability (free text — parents see this)">
         <input
@@ -383,7 +377,6 @@ function PracticeStep({
       <StepNav busy={busy} onBack={onBack} onSaveNext={() => save('next')} onSaveStay={() => save('stay')}
         nextDisabled={languages.length === 0 || serviceModes.length === 0}
       />
-      <StepInputStyles />
     </StepFrame>
   );
 }
@@ -481,7 +474,6 @@ function NewEducationForm({ onAdded }: { onAdded: () => void }) {
       <button type="submit" disabled={busy} className="btn-primary text-sm">
         {busy ? 'Adding…' : 'Add entry'}
       </button>
-      <StepInputStyles />
     </form>
   );
 }
@@ -567,7 +559,6 @@ function CredentialsStep({
 
       {err && <p className="text-sm text-coral-700">{err}</p>}
       <StepNav busy={busy} onBack={onBack} onSaveNext={onNext} nextDisabled={nextDisabled} nextLabel="Next → Review" />
-      <StepInputStyles />
     </StepFrame>
   );
 }
@@ -652,7 +643,6 @@ function NewCertificationForm({ onAdded }: { onAdded: () => void }) {
       <button type="submit" disabled={busy} className="btn-primary text-sm">
         {busy ? 'Adding…' : 'Add certification'}
       </button>
-      <StepInputStyles />
     </form>
   );
 }
@@ -735,8 +725,8 @@ function StepFrame({ title, blurb, children }: { title: string; blurb: string; c
   return (
     <div className="space-y-4">
       <div>
-        <h2 className="font-display text-2xl text-sage-900">{title.replace('&amp;', '&')}</h2>
-        <p className="text-sage-600 text-sm mt-0.5">{blurb.replace('&amp;', '&')}</p>
+        <h2 className="font-display text-2xl text-sage-900">{title}</h2>
+        <p className="text-sage-600 text-sm mt-0.5">{blurb}</p>
       </div>
       {children}
     </div>
@@ -773,63 +763,3 @@ function StepNav({
   );
 }
 
-function Field({ label, required, children }: { label: string; required?: boolean; children: React.ReactNode }) {
-  return (
-    <label className="block text-sm">
-      <span className="text-xs text-sage-500 uppercase tracking-wider">
-        {label}{required && <span className="text-coral-500 ml-1">*</span>}
-      </span>
-      {children}
-    </label>
-  );
-}
-
-function ChipGroup({
-  label, all, selected, labels, onToggle,
-}: {
-  label: string;
-  all: string[];
-  selected: string[];
-  labels?: Record<string, string>;
-  onToggle: (v: string) => void;
-}) {
-  return (
-    <div>
-      <div className="text-xs text-sage-500 uppercase tracking-wider mb-1">{label}</div>
-      <div className="flex flex-wrap gap-2">
-        {all.map((v) => (
-          <button
-            key={v}
-            type="button"
-            onClick={() => onToggle(v)}
-            className={`chip text-xs transition-colors ${
-              selected.includes(v)
-                ? 'bg-sage-600 text-cream-50'
-                : 'bg-cream-100 text-sage-700 hover:bg-sage-100'
-            }`}
-          >
-            {labels?.[v] ?? v}
-          </button>
-        ))}
-      </div>
-    </div>
-  );
-}
-
-function StepInputStyles() {
-  return (
-    <style jsx>{`
-      .input {
-        margin-top: 4px;
-        width: 100%;
-        border-radius: 12px;
-        border: 1px solid rgb(210 220 210);
-        background: #fbf9f4;
-        padding: 8px 12px;
-        font-size: 14px;
-        color: rgb(31 46 34);
-      }
-      .input:focus { outline: 2px solid rgb(90 130 100); outline-offset: 0; border-color: transparent; }
-    `}</style>
-  );
-}

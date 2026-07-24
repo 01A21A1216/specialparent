@@ -5,12 +5,14 @@ import { useMemo, useState } from 'react';
 import { useApi } from '../../../lib/swr';
 import { ApiState } from '../../../components/api-state';
 import { LANGUAGE_CODES, languageLabel } from '../../../lib/languages';
+import {
+  LEVEL_META, LEVEL_ORDER, MODE_META,
+  type ServiceMode as Mode, type TherapistLevel as Level,
+} from '../../../lib/therapist-levels';
+import { initials } from '../../../lib/utils';
 
 // The public therapist directory. Only VERIFIED profiles are returned by
 // the backend — parents never see a Draft, Pending, or Rejected profile.
-
-type Mode = 'ONLINE' | 'IN_PERSON' | 'HYBRID';
-type Level = 'INTERN' | 'RBT' | 'BCABA' | 'BCBA';
 
 interface Card {
   id: string;
@@ -31,18 +33,6 @@ interface Card {
   verifiedAt: string | null;
 }
 
-const MODE_META: Record<Mode, { emoji: string; label: string }> = {
-  ONLINE: { emoji: '💻', label: 'Online' },
-  IN_PERSON: { emoji: '📍', label: 'In person' },
-  HYBRID: { emoji: '↔', label: 'Hybrid' },
-};
-const LEVEL_ORDER: Level[] = ['INTERN', 'RBT', 'BCABA', 'BCBA'];
-const LEVEL_META: Record<Level, { short: string; long: string; tone: string }> = {
-  INTERN: { short: 'Intern', long: 'Intern / Trainee (supervised)',                          tone: 'bg-cream-100 text-sage-700 border border-cream-300' },
-  RBT:    { short: 'RBT',    long: 'Registered Behavior Technician',                          tone: 'bg-mist-100 text-mist-800 border border-mist-300' },
-  BCABA:  { short: 'BCaBA',  long: 'Board Certified Assistant Behavior Analyst',              tone: 'bg-sage-100 text-sage-800 border border-sage-300' },
-  BCBA:   { short: 'BCBA',   long: 'Board Certified Behavior Analyst',                        tone: 'bg-coral-100 text-coral-800 border border-coral-300' },
-};
 
 export default function TherapistsPage() {
   const [specialization, setSpecialization] = useState<string>('');
@@ -53,14 +43,15 @@ export default function TherapistsPage() {
   const [acceptingOnly, setAcceptingOnly] = useState<boolean>(true);
 
   const query = useMemo(() => {
-    const parts: string[] = [];
-    if (specialization) parts.push(`specialization=${encodeURIComponent(specialization)}`);
-    if (city) parts.push(`city=${encodeURIComponent(city)}`);
-    if (language) parts.push(`language=${language}`);
-    if (mode) parts.push(`mode=${mode}`);
-    if (level) parts.push(`level=${level}`);
-    if (acceptingOnly) parts.push(`accepting=true`);
-    return parts.length ? `?${parts.join('&')}` : '';
+    const p = new URLSearchParams();
+    if (specialization) p.set('specialization', specialization);
+    if (city) p.set('city', city);
+    if (language) p.set('language', language);
+    if (mode) p.set('mode', mode);
+    if (level) p.set('level', level);
+    if (acceptingOnly) p.set('accepting', 'true');
+    const s = p.toString();
+    return s ? `?${s}` : '';
   }, [specialization, city, language, mode, level, acceptingOnly]);
 
   const { data = [], isLoading, error, mutate } = useApi<Card[]>(
@@ -134,23 +125,29 @@ export default function TherapistsPage() {
         </div>
         <div className="flex flex-wrap items-baseline gap-2">
           <span className="text-xs text-sage-500 uppercase tracking-wider mr-1">Format</span>
-          {[
-            { v: '', label: 'Any format' },
-            { v: 'ONLINE', label: '💻 Online' },
-            { v: 'IN_PERSON', label: '📍 In person' },
-            { v: 'HYBRID', label: '↔ Hybrid' },
-          ].map((o) => (
+          <button
+            type="button"
+            onClick={() => setMode('')}
+            className={`chip text-xs ${
+              mode === ''
+                ? 'bg-sage-600 text-cream-50'
+                : 'bg-cream-100 text-sage-700 hover:bg-sage-100'
+            }`}
+          >
+            Any format
+          </button>
+          {(Object.keys(MODE_META) as Mode[]).map((m) => (
             <button
-              key={o.v || 'any'}
+              key={m}
               type="button"
-              onClick={() => setMode(o.v as Mode | '')}
+              onClick={() => setMode(m)}
               className={`chip text-xs ${
-                mode === o.v
+                mode === m
                   ? 'bg-sage-600 text-cream-50'
                   : 'bg-cream-100 text-sage-700 hover:bg-sage-100'
               }`}
             >
-              {o.label}
+              {MODE_META[m].emoji} {MODE_META[m].label}
             </button>
           ))}
         </div>
@@ -213,12 +210,7 @@ export default function TherapistsPage() {
                     // eslint-disable-next-line @next/next/no-img-element
                     <img src={t.photoUrl} alt="" className="w-full h-full object-cover" />
                   ) : (
-                    t.fullName
-                      .split(' ')
-                      .slice(0, 2)
-                      .map((n) => n[0])
-                      .join('')
-                      .toUpperCase()
+                    initials(t.fullName)
                   )}
                 </div>
                 <div className="min-w-0 flex-1">

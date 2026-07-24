@@ -6,12 +6,12 @@ import { useApi } from '../../../../lib/swr';
 import { api } from '../../../../lib/api';
 import { ApiState } from '../../../../components/api-state';
 import { useAuth } from '../../../../components/auth-provider';
-
-type Status = 'DRAFT' | 'PENDING_REVIEW' | 'VERIFIED' | 'REJECTED' | 'SUSPENDED';
-type Mode = 'ONLINE' | 'IN_PERSON' | 'HYBRID';
-type Level = 'INTERN' | 'RBT' | 'BCABA' | 'BCBA';
-
-const LEVEL_LABEL: Record<Level, string> = { INTERN: 'Intern', RBT: 'RBT', BCABA: 'BCaBA', BCBA: 'BCBA' };
+import {
+  STATUS_META, LEVEL_META,
+  type ServiceMode as Mode,
+  type TherapistLevel as Level,
+  type VerificationStatus as Status,
+} from '../../../../lib/therapist-levels';
 
 interface Education {
   id: string; degree: string; institution: string;
@@ -45,14 +45,6 @@ interface Row {
   certifications: Certification[];
 }
 
-const STATUS_ORDER: Status[] = ['PENDING_REVIEW', 'REJECTED', 'DRAFT', 'VERIFIED', 'SUSPENDED'];
-const STATUS_META: Record<Status, { label: string; tone: string }> = {
-  DRAFT: { label: 'Draft', tone: 'bg-cream-200 text-sage-800 border-cream-400' },
-  PENDING_REVIEW: { label: 'Pending', tone: 'bg-mist-100 text-mist-800 border-mist-300' },
-  VERIFIED: { label: 'Verified', tone: 'bg-sage-100 text-sage-800 border-sage-300' },
-  REJECTED: { label: 'Rejected', tone: 'bg-coral-100 text-coral-800 border-coral-300' },
-  SUSPENDED: { label: 'Suspended', tone: 'bg-coral-100 text-coral-900 border-coral-400' },
-};
 
 export default function AdminTherapistsPage() {
   const { user } = useAuth();
@@ -165,8 +157,11 @@ function TherapistReviewCard({ row, onChanged }: { row: Row; onChanged: () => vo
         </div>
         <div className="flex items-center gap-2 flex-wrap justify-end">
           {row.level && (
-            <span className="chip text-xs bg-mist-100 text-mist-800 border border-mist-200">
-              {LEVEL_LABEL[row.level]}
+            <span
+              className={`chip text-xs ${LEVEL_META[row.level].tone}`}
+              title={LEVEL_META[row.level].long}
+            >
+              {LEVEL_META[row.level].short}
             </span>
           )}
           <span className={`chip text-xs border ${status.tone}`}>{status.label}</span>

@@ -7,23 +7,20 @@ import { useAuth } from '../../../../components/auth-provider';
 import { api } from '../../../../lib/api';
 import { useApi } from '../../../../lib/swr';
 import { ApiState } from '../../../../components/api-state';
+import { ChipGroup } from '../../../../components/chip-group';
+import { FormField as Field } from '../../../../components/form-field';
 import { LANGUAGE_CODES, LANGUAGE_LABEL } from '../../../../lib/languages';
+import {
+  LEVEL_ORDER, LEVEL_META, STATUS_META,
+  type ServiceMode as Mode, type TherapistLevel as Level,
+  type VerificationStatus as Status,
+} from '../../../../lib/therapist-levels';
+import { toggleIn } from '../../../../lib/arrays';
 
 // Therapist's self-management page. Handles first-time onboarding
 // (empty profile → fill basics → add education → add certifications →
 // submit for review) and post-verification editing.
 
-type Status = 'DRAFT' | 'PENDING_REVIEW' | 'VERIFIED' | 'REJECTED' | 'SUSPENDED';
-type Mode = 'ONLINE' | 'IN_PERSON' | 'HYBRID';
-type Level = 'INTERN' | 'RBT' | 'BCABA' | 'BCBA';
-
-const LEVEL_ORDER: Level[] = ['INTERN', 'RBT', 'BCABA', 'BCBA'];
-const LEVEL_META: Record<Level, { short: string; long: string }> = {
-  INTERN: { short: 'Intern', long: 'Intern / Trainee (supervised)' },
-  RBT:    { short: 'RBT',    long: 'Registered Behavior Technician' },
-  BCABA:  { short: 'BCaBA',  long: 'Board Certified Assistant Behavior Analyst' },
-  BCBA:   { short: 'BCBA',   long: 'Board Certified Behavior Analyst' },
-};
 
 interface Education {
   id: string;
@@ -71,34 +68,6 @@ interface Profile {
   certifications: Certification[];
 }
 
-const STATUS_META: Record<Status, { label: string; tone: string; blurb: string }> = {
-  DRAFT: {
-    label: 'Draft',
-    tone: 'bg-cream-200 border-cream-400 text-sage-800',
-    blurb: 'Complete your profile and submit for review to appear in the parent directory.',
-  },
-  PENDING_REVIEW: {
-    label: 'Pending review',
-    tone: 'bg-mist-100 border-mist-300 text-mist-800',
-    blurb: "You're in the review queue. Our team is verifying your credentials — usually 2–5 working days.",
-  },
-  VERIFIED: {
-    label: 'Verified',
-    tone: 'bg-sage-100 border-sage-300 text-sage-800',
-    blurb: 'You are live in the parent directory. Edits to your headline fields will send the profile back for a quick re-review.',
-  },
-  REJECTED: {
-    label: 'Needs changes',
-    tone: 'bg-coral-100 border-coral-300 text-coral-800',
-    blurb: 'Our team needs a few things updated before we can publish your profile — see the note below.',
-  },
-  SUSPENDED: {
-    label: 'Paused',
-    tone: 'bg-coral-100 border-coral-400 text-coral-900',
-    blurb: 'Your profile is currently paused from the directory. Contact us if you believe this is a mistake.',
-  },
-};
-
 export default function TherapistProfilePage() {
   const { user } = useAuth();
   const router = useRouter();
@@ -130,7 +99,10 @@ export default function TherapistProfilePage() {
   return (
     <ApiState loading={isLoading} error={error} isEmpty={false} onRetry={() => mutate()}>
       {data ? (
-        <ProfileForm initial={data} onSaved={() => mutate()} />
+        // Key on updatedAt so any server-side change (submit-for-review,
+        // admin re-verify) remounts the form with fresh initial values —
+        // no useEffect-based re-hydration needed.
+        <ProfileForm key={data.id + data.updatedAt} initial={data} onSaved={() => mutate()} />
       ) : (
         // Momentary state while the redirect above fires.
         <div className="max-w-2xl">
@@ -171,24 +143,10 @@ function ProfileForm({
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
 
-  useEffect(() => {
-    // Sync when server sends fresh data (e.g., after submit-for-review).
-    if (!initial) return;
-    setSpecialization(initial.specialization);
-    setYearsExperience(initial.yearsExperience);
-    setBio(initial.bio ?? '');
-    setCity(initial.city ?? '');
-    setState(initial.state ?? '');
-    setLinkedinUrl(initial.linkedinUrl ?? '');
-    setWebsiteUrl(initial.websiteUrl ?? '');
-    setAvailability(initial.availability ?? '');
-    setLanguages(initial.languages);
-    setServiceModes(initial.serviceModes);
-    setAcceptingNewClients(initial.acceptingNewClients);
-    setHourlyRateRupees(initial.hourlyRate ? String(initial.hourlyRate / 100) : '');
-    setAgeGroups(initial.ageGroups);
-    setLevel(initial.level ?? '');
-  }, [initial?.updatedAt]); // eslint-disable-line react-hooks/exhaustive-deps
+  // Re-syncing form state to fresh server data is handled by the caller
+  // via a `key={...updatedAt}` prop, which remounts this whole form.
+  // No effect needed — and importantly, it means an in-flight user edit
+  // isn't silently overwritten by a background revalidation.
 
   async function save(e: React.FormEvent) {
     e.preventDefault();
@@ -237,10 +195,6 @@ function ProfileForm({
 
   const status = initial?.verificationStatus ?? 'DRAFT';
   const statusMeta = STATUS_META[status];
-
-  function toggleFrom<T>(list: T[], v: T): T[] {
-    return list.includes(v) ? list.filter((x) => x !== v) : [...list, v];
-  }
 
   return (
     <div className="space-y-6 max-w-3xl">
@@ -353,20 +307,20 @@ function ProfileForm({
           all={[...LANGUAGE_CODES]}
           labels={LANGUAGE_LABEL}
           selected={languages}
-          onToggle={(v) => setLanguages(toggleFrom(languages, v))}
+          onToggle={(v) => setLanguages(toggleIn(languages, v))}
         />
         <ChipGroup
           label="Session format"
           all={['ONLINE', 'IN_PERSON', 'HYBRID']}
           selected={serviceModes}
           labels={{ ONLINE: '💻 Online', IN_PERSON: '📍 In person', HYBRID: '↔ Hybrid' }}
-          onToggle={(v) => setServiceModes(toggleFrom(serviceModes, v as Mode))}
+          onToggle={(v) => setServiceModes(toggleIn(serviceModes, v as Mode))}
         />
         <ChipGroup
           label="Age groups"
           all={['0-3', '4-7', '8-12', '13-18', '18+']}
           selected={ageGroups}
-          onToggle={(v) => setAgeGroups(toggleFrom(ageGroups, v))}
+          onToggle={(v) => setAgeGroups(toggleIn(ageGroups, v))}
         />
 
         <div>
@@ -442,66 +396,6 @@ function ProfileForm({
         </>
       )}
 
-      <style jsx>{`
-        .input {
-          margin-top: 4px;
-          width: 100%;
-          border-radius: 12px;
-          border: 1px solid rgb(210 220 210);
-          background: #fbf9f4;
-          padding: 8px 12px;
-          font-size: 14px;
-          color: rgb(31 46 34);
-        }
-        .input:focus { outline: 2px solid rgb(90 130 100); outline-offset: 0; border-color: transparent; }
-      `}</style>
-    </div>
-  );
-}
-
-function Field({ label, required, children }: { label: string; required?: boolean; children: React.ReactNode }) {
-  return (
-    <label className="block text-sm">
-      <span className="text-xs text-sage-500 uppercase tracking-wider">
-        {label}{required && <span className="text-coral-500 ml-1">*</span>}
-      </span>
-      {children}
-    </label>
-  );
-}
-
-function ChipGroup({
-  label,
-  all,
-  selected,
-  labels,
-  onToggle,
-}: {
-  label: string;
-  all: string[];
-  selected: string[];
-  labels?: Record<string, string>;
-  onToggle: (v: string) => void;
-}) {
-  return (
-    <div>
-      <div className="text-xs text-sage-500 uppercase tracking-wider mb-1">{label}</div>
-      <div className="flex flex-wrap gap-2">
-        {all.map((v) => (
-          <button
-            key={v}
-            type="button"
-            onClick={() => onToggle(v)}
-            className={`chip text-xs transition-colors ${
-              selected.includes(v)
-                ? 'bg-sage-600 text-cream-50'
-                : 'bg-cream-100 text-sage-700 hover:bg-sage-100'
-            }`}
-          >
-            {labels?.[v] ?? v}
-          </button>
-        ))}
-      </div>
     </div>
   );
 }
