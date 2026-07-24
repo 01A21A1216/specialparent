@@ -50,6 +50,11 @@ services:
       CORS_ORIGIN: http://localhost:3000
       OPENAI_API_KEY: ${OPENAI_API_KEY:-}
       OPENAI_MODEL: ${OPENAI_MODEL:-gpt-4o-mini}
+      # Set SMTP_URL + MAIL_FROM in .env to enable real email delivery.
+      # Without SMTP_URL the mailer logs verification/reset links to
+      # this container's console instead of sending them.
+      SMTP_URL: ${SMTP_URL:-}
+      MAIL_FROM: ${MAIL_FROM:-}
     ports:
       - "4000:4000"
     command: >
@@ -73,6 +78,39 @@ services:
       NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:4000}
     ports:
       - "3000:3000"
+
+  # ─── Admin DB dashboard (opt-in) ────────────────────────────────────────
+  # Adminer is a battle-tested pgAdmin-alike for browsing / editing Postgres
+  # tables directly. Gated behind the `admin-tools` profile so it does NOT
+  # start by default — the prod overlay never sees it, and dev users have to
+  # opt in explicitly:
+  #
+  #     docker compose --profile admin-tools up -d adminer
+  #
+  # Login screen at http://localhost:8080 with:
+  #   System:   PostgreSQL
+  #   Server:   postgres          (pre-filled)
+  #   Username: specialparent
+  #   Password: specialparent     (matches POSTGRES_PASSWORD above)
+  #   Database: specialparent
+  #
+  # SECURITY: this exposes full DB access to whoever can reach localhost:8080.
+  # We bind to 127.0.0.1 so remote hosts on the same LAN can't hit it, but do
+  # NOT run this in production without a real auth proxy (Traefik + OIDC or
+  # similar). All actions here bypass the app's audit interceptor.
+  adminer:
+    image: adminer:5-standalone
+    container_name: specialparent-adminer
+    restart: unless-stopped
+    profiles: ["admin-tools"]
+    depends_on:
+      postgres:
+        condition: service_healthy
+    ports:
+      - "127.0.0.1:8080:8080"
+    environment:
+      ADMINER_DEFAULT_SERVER: postgres
+      ADMINER_DESIGN: pepa-linha-dark
 
 volumes:
   postgres-data:
