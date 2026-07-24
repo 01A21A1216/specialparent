@@ -7,6 +7,7 @@ import { useApi } from '../../../../lib/swr';
 import { ApiState } from '../../../../components/api-state';
 import { useAuth } from '../../../../components/auth-provider';
 import { api } from '../../../../lib/api';
+import { languageLabel } from '../../../../lib/languages';
 
 // Public detail page for one verified therapist. When the viewer is a
 // signed-in PARENT, we surface the "Invite to my child's care team" action.
@@ -185,7 +186,7 @@ function TherapistDetail({
         )}
         {t.languages.length > 0 && (
           <MiniCard label="Languages">
-            <p className="text-sm text-sage-700">{t.languages.join(' · ')}</p>
+            <p className="text-sm text-sage-700">{t.languages.map(languageLabel).join(' · ')}</p>
           </MiniCard>
         )}
         {t.ageGroups.length > 0 && (

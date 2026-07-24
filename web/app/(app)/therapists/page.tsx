@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { useMemo, useState } from 'react';
 import { useApi } from '../../../lib/swr';
 import { ApiState } from '../../../components/api-state';
+import { LANGUAGE_CODES, languageLabel } from '../../../lib/languages';
 
 // The public therapist directory. Only VERIFIED profiles are returned by
 // the backend — parents never see a Draft, Pending, or Rejected profile.
@@ -105,9 +106,20 @@ export default function TherapistsPage() {
         </div>
         <div className="flex flex-wrap items-baseline gap-2">
           <span className="text-xs text-sage-500 uppercase tracking-wider mr-1">Language</span>
-          {['', 'EN', 'HI', 'TA', 'TE', 'KN', 'ML', 'MR', 'BN', 'GU'].map((l) => (
+          <button
+            type="button"
+            onClick={() => setLanguage('')}
+            className={`chip text-xs ${
+              language === ''
+                ? 'bg-sage-600 text-cream-50'
+                : 'bg-cream-100 text-sage-700 hover:bg-sage-100'
+            }`}
+          >
+            Any
+          </button>
+          {LANGUAGE_CODES.map((l) => (
             <button
-              key={l || 'any'}
+              key={l}
               type="button"
               onClick={() => setLanguage(l)}
               className={`chip text-xs ${
@@ -116,7 +128,7 @@ export default function TherapistsPage() {
                   : 'bg-cream-100 text-sage-700 hover:bg-sage-100'
               }`}
             >
-              {l || 'Any'}
+              {languageLabel(l)}
             </button>
           ))}
         </div>
@@ -251,7 +263,7 @@ export default function TherapistsPage() {
                 ))}
                 {t.languages.slice(0, 5).map((l) => (
                   <span key={l} className="chip bg-mist-100 text-mist-800 border border-mist-200">
-                    {l}
+                    {languageLabel(l)}
                   </span>
                 ))}
                 {!t.acceptingNewClients && (

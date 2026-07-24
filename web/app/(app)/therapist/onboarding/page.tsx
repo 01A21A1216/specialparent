@@ -7,6 +7,7 @@ import { useAuth } from '../../../../components/auth-provider';
 import { api } from '../../../../lib/api';
 import { useApi, mutateGlobal } from '../../../../lib/swr';
 import { ApiState } from '../../../../components/api-state';
+import { LANGUAGE_CODES, LANGUAGE_LABEL } from '../../../../lib/languages';
 
 // Guided 4-step onboarding wizard for a newly-registered practitioner.
 // This exists next to /therapist/profile — the profile page is the
@@ -339,7 +340,8 @@ function PracticeStep({
     <StepFrame title="2. Practice details" blurb={STEPS[1].blurb}>
       <ChipGroup
         label="Languages you deliver care in"
-        all={['EN', 'HI', 'TA', 'TE', 'KN', 'ML', 'MR', 'BN', 'GU']}
+        all={[...LANGUAGE_CODES]}
+        labels={LANGUAGE_LABEL}
         selected={languages}
         onToggle={(v) => setLanguages(toggle(languages, v))}
       />

@@ -7,6 +7,7 @@ import { useApi } from '../../../../../lib/swr';
 import { api } from '../../../../../lib/api';
 import { ApiState } from '../../../../../components/api-state';
 import { useAuth } from '../../../../../components/auth-provider';
+import { languageLabel } from '../../../../../lib/languages';
 
 // Admin detail-review view for a single therapist profile. Structured
 // checklist of the things the reviewer must eyeball before approving:
@@ -276,7 +277,7 @@ function ReviewView({ row, onChanged, onDeleted }: { row: Detail; onChanged: () 
 
       {/* Practice snapshot */}
       <section className="card border border-sage-100 grid sm:grid-cols-2 gap-4 text-sm">
-        <SmallField label="Languages" value={row.languages.join(', ') || '—'} />
+        <SmallField label="Languages" value={row.languages.map(languageLabel).join(', ') || '—'} />
         <SmallField label="Session format" value={row.serviceModes.join(', ') || '—'} />
         <SmallField label="Age groups" value={row.ageGroups.join(', ') || '—'} />
         <SmallField label="Availability" value={row.availability || '—'} />

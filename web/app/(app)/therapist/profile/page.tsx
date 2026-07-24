@@ -7,6 +7,7 @@ import { useAuth } from '../../../../components/auth-provider';
 import { api } from '../../../../lib/api';
 import { useApi } from '../../../../lib/swr';
 import { ApiState } from '../../../../components/api-state';
+import { LANGUAGE_CODES, LANGUAGE_LABEL } from '../../../../lib/languages';
 
 // Therapist's self-management page. Handles first-time onboarding
 // (empty profile → fill basics → add education → add certifications →
@@ -349,7 +350,8 @@ function ProfileForm({
         </Field>
         <ChipGroup
           label="Languages"
-          all={['EN', 'HI', 'TA', 'TE', 'KN', 'ML', 'MR', 'BN', 'GU']}
+          all={[...LANGUAGE_CODES]}
+          labels={LANGUAGE_LABEL}
           selected={languages}
           onToggle={(v) => setLanguages(toggleFrom(languages, v))}
         />
