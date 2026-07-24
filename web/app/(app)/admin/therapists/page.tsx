@@ -9,6 +9,9 @@ import { useAuth } from '../../../../components/auth-provider';
 
 type Status = 'DRAFT' | 'PENDING_REVIEW' | 'VERIFIED' | 'REJECTED' | 'SUSPENDED';
 type Mode = 'ONLINE' | 'IN_PERSON' | 'HYBRID';
+type Level = 'INTERN' | 'RBT' | 'BCABA' | 'BCBA';
+
+const LEVEL_LABEL: Record<Level, string> = { INTERN: 'Intern', RBT: 'RBT', BCABA: 'BCaBA', BCBA: 'BCBA' };
 
 interface Education {
   id: string; degree: string; institution: string;
@@ -32,6 +35,7 @@ interface Row {
   linkedinUrl: string | null;
   websiteUrl: string | null;
   photoUrl: string | null;
+  level: Level | null;
   verificationStatus: Status;
   submittedAt: string | null;
   verifiedAt: string | null;
@@ -159,7 +163,12 @@ function TherapistReviewCard({ row, onChanged }: { row: Row; onChanged: () => vo
             </div>
           )}
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap justify-end">
+          {row.level && (
+            <span className="chip text-xs bg-mist-100 text-mist-800 border border-mist-200">
+              {LEVEL_LABEL[row.level]}
+            </span>
+          )}
           <span className={`chip text-xs border ${status.tone}`}>{status.label}</span>
           <Link href={`/admin/therapists/${row.id}`} className="btn-ghost text-xs">
             Open full review →

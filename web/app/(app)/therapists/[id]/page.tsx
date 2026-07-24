@@ -12,6 +12,14 @@ import { api } from '../../../../lib/api';
 // signed-in PARENT, we surface the "Invite to my child's care team" action.
 
 type Mode = 'ONLINE' | 'IN_PERSON' | 'HYBRID';
+type Level = 'INTERN' | 'RBT' | 'BCABA' | 'BCBA';
+
+const LEVEL_META: Record<Level, { short: string; long: string; tone: string }> = {
+  INTERN: { short: 'Intern', long: 'Intern / Trainee (supervised)',                          tone: 'bg-cream-100 text-sage-700 border border-cream-300' },
+  RBT:    { short: 'RBT',    long: 'Registered Behavior Technician',                          tone: 'bg-mist-100 text-mist-800 border border-mist-300' },
+  BCABA:  { short: 'BCaBA',  long: 'Board Certified Assistant Behavior Analyst',              tone: 'bg-sage-100 text-sage-800 border border-sage-300' },
+  BCBA:   { short: 'BCBA',   long: 'Board Certified Behavior Analyst',                        tone: 'bg-coral-100 text-coral-800 border border-coral-300' },
+};
 
 interface Education {
   id: string;
@@ -49,6 +57,7 @@ interface Detail {
   availability: string | null;
   acceptingNewClients: boolean;
   ageGroups: string[];
+  level: Level | null;
   verifiedAt: string | null;
   educations: Education[];
   certifications: Certification[];
@@ -122,6 +131,14 @@ function TherapistDetail({
               <span className="chip text-[11px] bg-sage-100 text-sage-800 border border-sage-200">
                 ✓ Verified by SpecialParent.in
               </span>
+              {t.level && (
+                <span
+                  className={`chip text-[11px] ${LEVEL_META[t.level].tone}`}
+                  title={LEVEL_META[t.level].long}
+                >
+                  {LEVEL_META[t.level].short}
+                </span>
+              )}
               {!t.acceptingNewClients && (
                 <span className="chip text-[11px] bg-coral-100 text-coral-800 border border-coral-200">
                   Waitlist only

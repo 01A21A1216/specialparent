@@ -115,6 +115,17 @@ enum ServiceMode {
   HYBRID
 }
 
+// Certification tier — currently modelled after the BACB ladder (ABA
+// practitioners). Optional because a SLP / OT / paediatric psychologist
+// won't map to this scale. Ordered lowest → highest for display and
+// filter defaults.
+enum TherapistLevel {
+  INTERN   // trainee / student in supervised practicum
+  RBT      // Registered Behavior Technician
+  BCABA    // Board Certified Assistant Behavior Analyst
+  BCBA     // Board Certified Behavior Analyst
+}
+
 model TherapistProfile {
   id                    String              @id @default(cuid())
   userId                String              @unique
@@ -138,6 +149,7 @@ model TherapistProfile {
   availability          String?             // freeform: "Mon–Fri 5–8pm; Sat 10–2"
   acceptingNewClients   Boolean             @default(true)
   ageGroups             String[]            @default([])  // "0-3", "4-7", "8-12", "13-18", "18+"
+  level                 TherapistLevel?     // e.g. BCBA / BCaBA / RBT / INTERN — optional; ABA-focused practitioners fill this in
 
   // Verification workflow — the trust surface of the whole feature.
   verificationStatus    VerificationStatus  @default(DRAFT)

@@ -15,6 +15,14 @@ import { useAuth } from '../../../../../components/auth-provider';
 // the reviewer, not a compliance record.
 
 type Status = 'DRAFT' | 'PENDING_REVIEW' | 'VERIFIED' | 'REJECTED' | 'SUSPENDED';
+type Level = 'INTERN' | 'RBT' | 'BCABA' | 'BCBA';
+
+const LEVEL_META: Record<Level, { short: string; long: string; tone: string }> = {
+  INTERN: { short: 'Intern', long: 'Intern / Trainee (supervised)',                          tone: 'bg-cream-100 text-sage-700 border border-cream-300' },
+  RBT:    { short: 'RBT',    long: 'Registered Behavior Technician',                          tone: 'bg-mist-100 text-mist-800 border border-mist-300' },
+  BCABA:  { short: 'BCaBA',  long: 'Board Certified Assistant Behavior Analyst',              tone: 'bg-sage-100 text-sage-800 border border-sage-300' },
+  BCBA:   { short: 'BCBA',   long: 'Board Certified Behavior Analyst',                        tone: 'bg-coral-100 text-coral-800 border border-coral-300' },
+};
 
 interface Education {
   id: string; degree: string; institution: string;
@@ -43,6 +51,7 @@ interface Detail {
   availability: string | null;
   acceptingNewClients: boolean;
   ageGroups: string[];
+  level: Level | null;
   verificationStatus: Status;
   submittedAt: string | null;
   verifiedAt: string | null;
@@ -144,6 +153,14 @@ function ReviewView({ row, onChanged, onDeleted }: { row: Detail; onChanged: () 
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2 flex-wrap mb-1">
             <span className={`chip text-xs border ${status.tone}`}>{status.label}</span>
+            {row.level && (
+              <span
+                className={`chip text-xs ${LEVEL_META[row.level].tone}`}
+                title={LEVEL_META[row.level].long}
+              >
+                {LEVEL_META[row.level].short}
+              </span>
+            )}
             {row.submittedAt && (
               <span className="text-xs text-sage-500">Submitted {new Date(row.submittedAt).toLocaleString('en-IN')}</span>
             )}

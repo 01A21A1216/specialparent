@@ -9,6 +9,7 @@ import { ApiState } from '../../../components/api-state';
 // the backend — parents never see a Draft, Pending, or Rejected profile.
 
 type Mode = 'ONLINE' | 'IN_PERSON' | 'HYBRID';
+type Level = 'INTERN' | 'RBT' | 'BCABA' | 'BCBA';
 
 interface Card {
   id: string;
@@ -25,6 +26,7 @@ interface Card {
   photoUrl: string | null;
   acceptingNewClients: boolean;
   ageGroups: string[];
+  level: Level | null;
   verifiedAt: string | null;
 }
 
@@ -33,12 +35,20 @@ const MODE_META: Record<Mode, { emoji: string; label: string }> = {
   IN_PERSON: { emoji: '📍', label: 'In person' },
   HYBRID: { emoji: '↔', label: 'Hybrid' },
 };
+const LEVEL_ORDER: Level[] = ['INTERN', 'RBT', 'BCABA', 'BCBA'];
+const LEVEL_META: Record<Level, { short: string; long: string; tone: string }> = {
+  INTERN: { short: 'Intern', long: 'Intern / Trainee (supervised)',                          tone: 'bg-cream-100 text-sage-700 border border-cream-300' },
+  RBT:    { short: 'RBT',    long: 'Registered Behavior Technician',                          tone: 'bg-mist-100 text-mist-800 border border-mist-300' },
+  BCABA:  { short: 'BCaBA',  long: 'Board Certified Assistant Behavior Analyst',              tone: 'bg-sage-100 text-sage-800 border border-sage-300' },
+  BCBA:   { short: 'BCBA',   long: 'Board Certified Behavior Analyst',                        tone: 'bg-coral-100 text-coral-800 border border-coral-300' },
+};
 
 export default function TherapistsPage() {
   const [specialization, setSpecialization] = useState<string>('');
   const [city, setCity] = useState<string>('');
   const [language, setLanguage] = useState<string>('');
   const [mode, setMode] = useState<Mode | ''>('');
+  const [level, setLevel] = useState<Level | ''>('');
   const [acceptingOnly, setAcceptingOnly] = useState<boolean>(true);
 
   const query = useMemo(() => {
@@ -47,9 +57,10 @@ export default function TherapistsPage() {
     if (city) parts.push(`city=${encodeURIComponent(city)}`);
     if (language) parts.push(`language=${language}`);
     if (mode) parts.push(`mode=${mode}`);
+    if (level) parts.push(`level=${level}`);
     if (acceptingOnly) parts.push(`accepting=true`);
     return parts.length ? `?${parts.join('&')}` : '';
-  }, [specialization, city, language, mode, acceptingOnly]);
+  }, [specialization, city, language, mode, level, acceptingOnly]);
 
   const { data = [], isLoading, error, mutate } = useApi<Card[]>(
     `/public/therapists${query}`,
@@ -131,6 +142,33 @@ export default function TherapistsPage() {
             </button>
           ))}
         </div>
+        <div className="flex flex-wrap items-baseline gap-2">
+          <span className="text-xs text-sage-500 uppercase tracking-wider mr-1" title="Board Analyst Certification Board tier — ABA practitioners only">
+            ABA level
+          </span>
+          <button
+            type="button"
+            onClick={() => setLevel('')}
+            className={`chip text-xs ${
+              level === '' ? 'bg-sage-600 text-cream-50' : 'bg-cream-100 text-sage-700 hover:bg-sage-100'
+            }`}
+          >
+            Any level
+          </button>
+          {LEVEL_ORDER.map((l) => (
+            <button
+              key={l}
+              type="button"
+              onClick={() => setLevel(l)}
+              title={LEVEL_META[l].long}
+              className={`chip text-xs ${
+                level === l ? 'bg-sage-600 text-cream-50' : 'bg-cream-100 text-sage-700 hover:bg-sage-100'
+              }`}
+            >
+              {LEVEL_META[l].short}
+            </button>
+          ))}
+        </div>
         <label className="flex items-center gap-2 text-sm text-sage-700 pt-1">
           <input
             type="checkbox"
@@ -183,12 +221,22 @@ export default function TherapistsPage() {
                     {t.city ? ` · ${t.city}${t.state ? `, ${t.state}` : ''}` : ''}
                   </div>
                 </div>
-                <span
-                  className="chip text-[10px] bg-sage-100 text-sage-800 border border-sage-200"
-                  title="Verified by SpecialParent.in"
-                >
-                  ✓ Verified
-                </span>
+                <div className="flex flex-col items-end gap-1">
+                  <span
+                    className="chip text-[10px] bg-sage-100 text-sage-800 border border-sage-200"
+                    title="Verified by SpecialParent.in"
+                  >
+                    ✓ Verified
+                  </span>
+                  {t.level && (
+                    <span
+                      className={`chip text-[10px] ${LEVEL_META[t.level].tone}`}
+                      title={LEVEL_META[t.level].long}
+                    >
+                      {LEVEL_META[t.level].short}
+                    </span>
+                  )}
+                </div>
               </header>
 
               {t.bio && (

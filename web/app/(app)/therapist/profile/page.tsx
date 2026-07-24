@@ -14,6 +14,15 @@ import { ApiState } from '../../../../components/api-state';
 
 type Status = 'DRAFT' | 'PENDING_REVIEW' | 'VERIFIED' | 'REJECTED' | 'SUSPENDED';
 type Mode = 'ONLINE' | 'IN_PERSON' | 'HYBRID';
+type Level = 'INTERN' | 'RBT' | 'BCABA' | 'BCBA';
+
+const LEVEL_ORDER: Level[] = ['INTERN', 'RBT', 'BCABA', 'BCBA'];
+const LEVEL_META: Record<Level, { short: string; long: string }> = {
+  INTERN: { short: 'Intern', long: 'Intern / Trainee (supervised)' },
+  RBT:    { short: 'RBT',    long: 'Registered Behavior Technician' },
+  BCABA:  { short: 'BCaBA',  long: 'Board Certified Assistant Behavior Analyst' },
+  BCBA:   { short: 'BCBA',   long: 'Board Certified Behavior Analyst' },
+};
 
 interface Education {
   id: string;
@@ -51,6 +60,7 @@ interface Profile {
   availability: string | null;
   acceptingNewClients: boolean;
   ageGroups: string[];
+  level: Level | null;
   verificationStatus: Status;
   submittedAt: string | null;
   verifiedAt: string | null;
@@ -156,6 +166,7 @@ function ProfileForm({
     initial?.hourlyRate ? String(initial.hourlyRate / 100) : '',
   );
   const [ageGroups, setAgeGroups] = useState<string[]>(initial?.ageGroups ?? []);
+  const [level, setLevel] = useState<Level | ''>(initial?.level ?? '');
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
 
@@ -175,6 +186,7 @@ function ProfileForm({
     setAcceptingNewClients(initial.acceptingNewClients);
     setHourlyRateRupees(initial.hourlyRate ? String(initial.hourlyRate / 100) : '');
     setAgeGroups(initial.ageGroups);
+    setLevel(initial.level ?? '');
   }, [initial?.updatedAt]); // eslint-disable-line react-hooks/exhaustive-deps
 
   async function save(e: React.FormEvent) {
@@ -198,6 +210,7 @@ function ProfileForm({
           acceptingNewClients,
           hourlyRate: hourlyRateRupees ? Math.round(Number(hourlyRateRupees) * 100) : undefined,
           ageGroups,
+          level: level || undefined,
         },
       });
       onSaved();
@@ -353,6 +366,36 @@ function ProfileForm({
           selected={ageGroups}
           onToggle={(v) => setAgeGroups(toggleFrom(ageGroups, v))}
         />
+
+        <div>
+          <div className="text-xs text-sage-500 uppercase tracking-wider mb-1">
+            Certification level <span className="normal-case text-sage-400">(ABA — optional)</span>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <button
+              type="button"
+              onClick={() => setLevel('')}
+              className={`chip text-xs transition-colors ${
+                level === '' ? 'bg-sage-600 text-cream-50' : 'bg-cream-100 text-sage-700 hover:bg-sage-100'
+              }`}
+            >
+              Not applicable
+            </button>
+            {LEVEL_ORDER.map((l) => (
+              <button
+                key={l}
+                type="button"
+                onClick={() => setLevel(l)}
+                title={LEVEL_META[l].long}
+                className={`chip text-xs transition-colors ${
+                  level === l ? 'bg-sage-600 text-cream-50' : 'bg-cream-100 text-sage-700 hover:bg-sage-100'
+                }`}
+              >
+                {LEVEL_META[l].short}
+              </button>
+            ))}
+          </div>
+        </div>
 
         <h2 className="font-display text-xl text-sage-900 pt-4">2. Verification links</h2>
         <Field label="LinkedIn profile URL">

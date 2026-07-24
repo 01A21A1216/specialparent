@@ -16,7 +16,17 @@ import { ApiState } from '../../../../components/api-state';
 
 type Mode = 'ONLINE' | 'IN_PERSON' | 'HYBRID';
 type Status = 'DRAFT' | 'PENDING_REVIEW' | 'VERIFIED' | 'REJECTED' | 'SUSPENDED';
+type Level = 'INTERN' | 'RBT' | 'BCABA' | 'BCBA';
 type StepId = 'basics' | 'practice' | 'education' | 'credentials' | 'submit';
+
+// Ordered lowest → highest for display; use the short label as the chip text.
+const LEVEL_ORDER: Level[] = ['INTERN', 'RBT', 'BCABA', 'BCBA'];
+const LEVEL_META: Record<Level, { short: string; long: string }> = {
+  INTERN: { short: 'Intern', long: 'Intern / Trainee (supervised)' },
+  RBT:    { short: 'RBT',    long: 'Registered Behavior Technician' },
+  BCABA:  { short: 'BCaBA',  long: 'Board Certified Assistant Behavior Analyst' },
+  BCBA:   { short: 'BCBA',   long: 'Board Certified Behavior Analyst' },
+};
 
 interface Education {
   id: string; degree: string; institution: string;
@@ -41,6 +51,7 @@ interface Profile {
   availability: string | null;
   acceptingNewClients: boolean;
   ageGroups: string[];
+  level: Level | null;
   verificationStatus: Status;
   updatedAt: string;
   educations: Education[];
@@ -171,6 +182,7 @@ function BasicsStep({
   const [city, setCity] = useState(profile?.city ?? '');
   const [state, setState] = useState(profile?.state ?? '');
   const [bio, setBio] = useState(profile?.bio ?? '');
+  const [level, setLevel] = useState<Level | ''>(profile?.level ?? '');
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
 
@@ -183,6 +195,7 @@ function BasicsStep({
         city: city || undefined,
         state: state || undefined,
         bio: bio || undefined,
+        level: level || undefined,
         // Preserve any values from later steps so a save here doesn't wipe them.
         languages: profile?.languages ?? [],
         serviceModes: profile?.serviceModes ?? [],
@@ -227,6 +240,35 @@ function BasicsStep({
         <Field label="State">
           <input value={state} onChange={(e) => setState(e.target.value)} maxLength={80} placeholder="Karnataka" className="input" />
         </Field>
+      </div>
+      <div>
+        <div className="text-xs text-sage-500 uppercase tracking-wider mb-1">
+          Certification level <span className="normal-case text-sage-400">(ABA practitioners — leave blank if not applicable)</span>
+        </div>
+        <div className="flex flex-wrap gap-2">
+          <button
+            type="button"
+            onClick={() => setLevel('')}
+            className={`chip text-xs transition-colors ${
+              level === '' ? 'bg-sage-600 text-cream-50' : 'bg-cream-100 text-sage-700 hover:bg-sage-100'
+            }`}
+          >
+            Not applicable
+          </button>
+          {LEVEL_ORDER.map((l) => (
+            <button
+              key={l}
+              type="button"
+              onClick={() => setLevel(l)}
+              title={LEVEL_META[l].long}
+              className={`chip text-xs transition-colors ${
+                level === l ? 'bg-sage-600 text-cream-50' : 'bg-cream-100 text-sage-700 hover:bg-sage-100'
+              }`}
+            >
+              {LEVEL_META[l].short}
+            </button>
+          ))}
+        </div>
       </div>
       <Field label="A short bio">
         <textarea
@@ -277,6 +319,7 @@ function PracticeStep({
         city: profile.city ?? undefined,
         state: profile.state ?? undefined,
         bio: profile.bio ?? undefined,
+        level: profile.level ?? undefined,
         languages,
         serviceModes,
         ageGroups,
@@ -461,6 +504,7 @@ function CredentialsStep({
         city: profile.city ?? undefined,
         state: profile.state ?? undefined,
         bio: profile.bio ?? undefined,
+        level: profile.level ?? undefined,
         languages: profile.languages,
         serviceModes: profile.serviceModes,
         ageGroups: profile.ageGroups,

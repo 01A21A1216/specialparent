@@ -35,6 +35,7 @@ import {
   Prisma,
   Role,
   ServiceMode,
+  TherapistLevel,
   VerificationStatus,
 } from '@prisma/client';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
@@ -79,6 +80,7 @@ export class UpsertTherapistProfileDto {
   @IsOptional() @IsBoolean() acceptingNewClients?: boolean;
   @IsOptional() @IsArray() @ArrayMaxSize(6) @IsString({ each: true }) @MaxLength(10, { each: true })
   ageGroups?: string[];
+  @IsOptional() @IsEnum(TherapistLevel) level?: TherapistLevel;
 }
 
 export class UpsertEducationDto {
@@ -171,6 +173,7 @@ export class TherapistDirectoryService {
         availability: dto.availability,
         acceptingNewClients: dto.acceptingNewClients ?? true,
         ageGroups: dto.ageGroups ?? [],
+        level: dto.level ?? null,
       },
       update: {
         specialization: dto.specialization,
@@ -189,6 +192,7 @@ export class TherapistDirectoryService {
         availability: dto.availability,
         acceptingNewClients: dto.acceptingNewClients ?? true,
         ageGroups: dto.ageGroups ?? [],
+        level: dto.level ?? null,
         ...(nextStatus ? { verificationStatus: nextStatus, submittedAt: new Date() } : {}),
       },
     });
@@ -411,6 +415,7 @@ export class TherapistDirectoryService {
     language?: string;
     mode?: ServiceMode;
     accepting?: boolean;
+    level?: TherapistLevel;
   }) {
     const where: Prisma.TherapistProfileWhereInput = {
       verificationStatus: 'VERIFIED',
@@ -425,6 +430,7 @@ export class TherapistDirectoryService {
     if (filters.language) where.languages = { has: filters.language };
     if (filters.mode) where.serviceModes = { has: filters.mode };
     if (typeof filters.accepting === 'boolean') where.acceptingNewClients = filters.accepting;
+    if (filters.level) where.level = filters.level;
 
     const rows = await this.prisma.therapistProfile.findMany({
       where,
@@ -443,6 +449,7 @@ export class TherapistDirectoryService {
         photoUrl: true,
         acceptingNewClients: true,
         ageGroups: true,
+        level: true,
         verifiedAt: true,
         user: { select: { fullName: true } },
       },
@@ -666,6 +673,7 @@ export class PublicTherapistController {
     @Query('language') language?: string,
     @Query('mode') mode?: ServiceMode,
     @Query('accepting') accepting?: string,
+    @Query('level') level?: TherapistLevel,
   ) {
     return this.svc.publicList({
       specialization,
@@ -673,6 +681,7 @@ export class PublicTherapistController {
       language,
       mode,
       accepting: accepting === 'true' ? true : accepting === 'false' ? false : undefined,
+      level,
     });
   }
 
